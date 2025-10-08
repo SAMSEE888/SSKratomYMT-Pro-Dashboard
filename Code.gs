@@ -1,14 +1,24 @@
-
 // ID ของ Google Sheet ที่ต้องการบันทึกข้อมูล
 const SHEET_ID = '11vhg37MbHRm53SSEHLsCI3EBXx5_meXVvlRuqhFteaY';
 // ชื่อของชีต (แท็บ) ที่ต้องการบันทึกข้อมูล
 const SHEET_NAME = 'SaleForm';
 
-// ฟังก์ชันหลักที่เรียกเมื่อเว็บแอปเปิด
-function doGet() {
+function doGet(e) {
   return HtmlService.createHtmlOutputFromFile('index')
     .setTitle('SSKratomYMT Pro Dashboard')
-    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1.0');
+}
+
+// ฟังก์ชันสำหรับจัดการ CORS
+function handleCORS() {
+  return ContentService.createTextOutput(JSON.stringify({status: 'ok'}))
+    .setMimeType(ContentService.MimeType.JSON)
+    .setHeaders({
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type'
+    });
 }
 
 // ฟังก์ชันบันทึกข้อมูลจากฟอร์ม
@@ -58,16 +68,32 @@ function doPost(postData) {
     // บันทึกข้อมูลลงแถวใหม่
     sheet.appendRow(newRow);
     
-    return ContentService.createTextOutput(JSON.stringify({
+    const response = {
       success: true,
       message: 'บันทึกข้อมูลเรียบร้อยแล้ว'
-    })).setMimeType(ContentService.MimeType.JSON);
+    };
     
+    return ContentService.createTextOutput(JSON.stringify(response))
+      .setMimeType(ContentService.MimeType.JSON)
+      .setHeaders({
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type'
+      });
+      
   } catch (error) {
-    return ContentService.createTextOutput(JSON.stringify({
+    const response = {
       success: false,
       error: error.message
-    })).setMimeType(ContentService.MimeType.JSON);
+    };
+    
+    return ContentService.createTextOutput(JSON.stringify(response))
+      .setMimeType(ContentService.MimeType.JSON)
+      .setHeaders({
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type'
+      });
   }
 }
 
@@ -76,10 +102,16 @@ function getData() {
   try {
     const ss = SpreadsheetApp.openById(SHEET_ID);
     const sheet = ss.getSheetByName(SHEET_NAME);
-    
+ 
     // หากไม่มีข้อมูล
     if (sheet.getLastRow() <= 1) {
-      return JSON.stringify([]);
+      return ContentService.createTextOutput(JSON.stringify([]))
+        .setMimeType(ContentService.MimeType.JSON)
+        .setHeaders({
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type'
+        });
     }
     
     // ดึงข้อมูลทั้งหมด (ข้ามหัวข้อ)
@@ -112,12 +144,22 @@ function getData() {
       };
     });
     
-    return JSON.stringify(result);
-    
+    return ContentService.createTextOutput(JSON.stringify(result))
+      .setMimeType(ContentService.MimeType.JSON)
+      .setHeaders({
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type'
+      });
+      
   } catch (error) {
-    return JSON.stringify({
-      error: error.message
-    });
+    return ContentService.createTextOutput(JSON.stringify({error: error.message}))
+      .setMimeType(ContentService.MimeType.JSON)
+      .setHeaders({
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type'
+      });
   }
 }
 
@@ -129,20 +171,30 @@ function getSheetDataAsCsv() {
     
     // หากไม่มีข้อมูล
     if (sheet.getLastRow() === 0) {
-      return "ไม่มีข้อมูล";
+      return ContentService.createTextOutput("ไม่มีข้อมูล")
+        .setMimeType(ContentService.MimeType.TEXT)
+        .setHeaders({
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type'
+        });
     }
     
     // ดึงข้อมูลทั้งหมด
-    const dataRange = sheet.getRange(1, 1, sheet.getLastRow(), 11);
+    const dataRange = sheet.getRange(1, 1, sheet.getLastRow(), 12);
     const data = dataRange.getValues();
     
     // แปลงเป็น CSV
     const csvContent = data.map(row => {
       // จัดรูปแบบวันที่ให้เหมาะสม
-      if (row[0] instanceof Date) {
-        row[0] = Utilities.formatDate(row[0], Session.getScriptTimeZone(), 'dd/MM/yyyy');
+      const formattedRow = [...row];
+      if (formattedRow[0] instanceof Date) {
+        formattedRow[0] = Utilities.formatDate(formattedRow[0], Session.getScriptTimeZone(), 'dd/MM/yyyy');
       }
-      return row.map(field => {
+      if (formattedRow[11] instanceof Date) {
+        formattedRow[11] = Utilities.formatDate(formattedRow[11], Session.getScriptTimeZone(), 'dd/MM/yyyy HH:mm:ss');
+      }
+      return formattedRow.map(field => {
         // ใส่เครื่องหมายคำพูดหากมี comma ใน field
         if (typeof field === 'string' && field.includes(',')) {
           return `"${field}"`;
@@ -151,14 +203,128 @@ function getSheetDataAsCsv() {
       }).join(',');
     }).join('\n');
     
-    return csvContent;
+    return ContentService.createTextOutput(csvContent)
+      .setMimeType(ContentService.MimeType.CSV)
+      .setHeaders({
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type',
+        'Content-Disposition': 'attachment; filename="SSKratomYMT_SalesData.csv"'
+      });
     
   } catch (error) {
-    return "Error: " + error.message;
+    return ContentService.createTextOutput("Error: " + error.message)
+      .setMimeType(ContentService.MimeType.TEXT)
+      .setHeaders({
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type'
+      });
   }
 }
 
+// ฟังก์ชันช่วยเหลือ
+function getWeekNumber(date) {
+  const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
+  const pastDaysOfYear = (date - firstDayOfYear) / 86400000;
+  return Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7);
+}
 
+function getDateRange(days) {
+  const date = new Date();
+  date.setDate(date.getDate() - days);
+  return date;
+}
+
+// เพิ่มฟังก์ชัน createYearlySummary ที่ขาดไป
+function createYearlySummary(ss) {
+  const sheetName = 'รายงานสรุปรายปี';
+  let summarySheet = ss.getSheetByName(sheetName);
+  
+  if (!summarySheet) {
+    summarySheet = ss.insertSheet(sheetName);
+  } else {
+    summarySheet.clear();
+  }
+  
+  const headers = [
+    'ปี',
+    'ยอดขายรวม (ขวด)',
+    'รายได้รวม',
+    'รายจ่ายรวม',
+    'กำไรสุทธิ',
+    'อัตรากำไร (%)',
+    'ยอดขายเฉลี่ย/วัน',
+    'รายได้เฉลี่ย/วัน',
+    'กำไรเฉลี่ย/วัน',
+    'วันทำการ'
+  ];
+  
+  summarySheet.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold');
+  
+  const dataSheet = ss.getSheetByName(SHEET_NAME);
+  if (dataSheet.getLastRow() <= 1) return;
+  
+  const data = dataSheet.getRange(2, 1, dataSheet.getLastRow() - 1, 11).getValues();
+  
+  // จัดกลุ่มข้อมูลตามปี
+  const yearlyData = {};
+  data.forEach(row => {
+    const date = new Date(row[0]);
+    const year = date.getFullYear();
+    const yearKey = year.toString();
+    
+    if (!yearlyData[yearKey]) {
+      yearlyData[yearKey] = {
+        year: year,
+        sold: 0,
+        revenue: 0,
+        expense: 0,
+        balance: 0,
+        days: new Set(),
+        count: 0
+      };
+    }
+    
+    yearlyData[yearKey].sold += Number(row[1]) || 0;
+    yearlyData[yearKey].revenue += Number(row[4]) || 0;
+    yearlyData[yearKey].expense += Number(row[9]) || 0;
+    yearlyData[yearKey].balance += Number(row[10]) || 0;
+    yearlyData[yearKey].days.add(date.toISOString().split('T')[0]);
+    yearlyData[yearKey].count++;
+  });
+  
+  // คำนวณและบันทึกข้อมูลสรุป
+  const summaryData = [];
+  Object.keys(yearlyData).sort().forEach(yearKey => {
+    const year = yearlyData[yearKey];
+    const profitMargin = year.revenue > 0 ? (year.balance / year.revenue) * 100 : 0;
+    const workingDays = year.days.size;
+    
+    summaryData.push([
+      year.year,
+      year.sold,
+      year.revenue,
+      year.expense,
+      year.balance,
+      profitMargin.toFixed(2),
+      (year.sold / workingDays).toFixed(1),
+      (year.revenue / workingDays).toFixed(2),
+      (year.balance / workingDays).toFixed(2),
+      workingDays
+    ]);
+  });
+  
+  if (summaryData.length > 0) {
+    summarySheet.getRange(2, 1, summaryData.length, headers.length).setValues(summaryData);
+    
+    // จัดรูปแบบ
+    summarySheet.setColumnWidths(1, headers.length, 120);
+    summarySheet.getRange('C:E').setNumberFormat('#,##0.00');
+    summarySheet.getRange('F:F').setNumberFormat('0.00%');
+    summarySheet.getRange('G:I').setNumberFormat('#,##0.00');
+  }
+}
 
 // ฟังก์ชันสร้างชีตรายงานสรุปทั้งหมด
 function createSummaryReports() {
@@ -186,15 +352,55 @@ function createSummaryReports() {
     // สร้างชีตสถิติและแนวโน้ม
     createTrendAnalysis(ss);
     
-    return JSON.stringify({
+    return ContentService.createTextOutput(JSON.stringify({
       success: true,
       message: 'สร้างชีตรายงานสรุปทั้งหมดเรียบร้อยแล้ว'
+    }))
+    .setMimeType(ContentService.MimeType.JSON)
+    .setHeaders({
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type'
     });
     
   } catch (error) {
-    return JSON.stringify({
+    return ContentService.createTextOutput(JSON.stringify({
       success: false,
       error: error.message
+    }))
+    .setMimeType(ContentService.MimeType.JSON)
+    .setHeaders({
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type'
+    });
+  }
+}
+
+// ฟังก์ชันเรียกใช้งานจากเว็บแอป
+function generateAllReports() {
+  try {
+    createSummaryReports();
+    return ContentService.createTextOutput(JSON.stringify({
+      success: true,
+      message: 'สร้างรายงานสรุปทั้งหมดเรียบร้อยแล้ว'
+    }))
+    .setMimeType(ContentService.MimeType.JSON)
+    .setHeaders({
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type'
+    });
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({
+      success: false,
+      error: error.message
+    }))
+    .setMimeType(ContentService.MimeType.JSON)
+    .setHeaders({
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type'
     });
   }
 }
@@ -269,7 +475,7 @@ function createDailySummary(ss) {
       day.revenue,
       day.expense,
       day.balance,
-      `${profitMargin.toFixed(2)}%`,
+      profitMargin.toFixed(2),
       avgExpensePerBottle.toFixed(2),
       avgProfitPerBottle.toFixed(2),
       day.count
@@ -840,34 +1046,5 @@ function createTrendAnalysis(ss) {
       
       summarySheet.insertChart(chart);
     }
-  }
-}
-
-// ฟังก์ชันช่วยเหลือ
-function getWeekNumber(date) {
-  const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
-  const pastDaysOfYear = (date - firstDayOfYear) / 86400000;
-  return Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7);
-}
-
-function getDateRange(days) {
-  const date = new Date();
-  date.setDate(date.getDate() - days);
-  return date;
-}
-
-// ฟังก์ชันเรียกใช้งานจากเว็บแอป
-function generateAllReports() {
-  try {
-    createSummaryReports();
-    return JSON.stringify({
-      success: true,
-      message: 'สร้างรายงานสรุปทั้งหมดเรียบร้อยแล้ว'
-    });
-  } catch (error) {
-    return JSON.stringify({
-      success: false,
-      error: error.message
-    });
   }
 }
