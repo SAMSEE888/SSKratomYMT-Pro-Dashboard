@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <base target="_top">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SSKratomYMT Pro</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.9.4/css/bulma.min.css">
+    <style>
+        :root {
+            --primary: #2E7D32; --primary-light: #4CAF50; --accent: #8BC34A;
+            --background: #F1F8E9; --card-bg: #ffffff; --text-dark: #263238;
+            --text-medium: #455A64; --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
+            --border-radius: 12px; --transition: all 0.3s ease;
+        }
+        html { scroll-behavior: smooth; }
+        body { font-family: 'Kanit', sans-serif; background-color: var(--background); color: var(--text-dark); line-height: 1.6; }
+        .app-container { max-width: 1200px; margin: 2rem auto; padding: 1rem; }
+        .app-header { text-align: center; margin-bottom: 2rem; }
+        .tab-menu { border-bottom: 2px solid #e0e0e0; margin-bottom: 2rem; }
+        .tab-btn { padding: 1rem 1.5rem; border: none; background: none; font-size: 1.1rem; font-weight: 500; cursor: pointer; color: var(--text-medium); transition: var(--transition); position: relative; }
+        .tab-btn.active { color: var(--primary); }
+        .tab-btn.active::after { content: ''; position: absolute; bottom: -2px; left: 0; width: 100%; height: 2px; background-color: var(--primary); }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; animation: fadeIn 0.5s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .form-card { background: var(--card-bg); border-radius: var(--border-radius); box-shadow: var(--shadow-md); padding: 2rem; margin-bottom: 2rem; }
+        .form-group label { font-weight: 500; color: var(--text-medium); }
+        .output-box { padding: 1rem; border-radius: 8px; margin-top: 1.5rem; font-size: 1.2rem; display: flex; justify-content: space-between; align-items: center; }
+        .output-box.revenue { border-left: 4px solid #388E3C; background-color: #E8F5E9; }
+        .output-box.expense { border-left: 4px solid #D32F2F; background-color: #FFEBEE; }
+        .output-box.balance { border-left: 4px solid var(--primary); background-color: #F1F8E9; font-size: 1.5rem; font-weight: 600; }
+        .submit-btn { width: 100%; padding: 1rem; background: linear-gradient(135deg, var(--primary-light), var(--primary)); color: white; border: none; border-radius: 8px; font-size: 1.2rem; font-weight: 500; cursor: pointer; transition: var(--transition); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .submit-btn:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+        /* Dashboard Styles */
+        .dashboard-card { background: var(--card-bg); border-radius: var(--border-radius); box-shadow: var(--shadow-md); padding: 2rem; }
+        .filter-buttons .button { font-weight: 500; }
+        .metric-box { background: var(--card-bg); border-radius: var(--border-radius); padding: 1.5rem; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: var(--transition); border-top: 4px solid; }
+        .metric-box:hover { transform: translateY(-5px); box-shadow: var(--shadow-md); }
+        .metric-box .icon i { font-size: 2rem; }
+        .metric-box .title { font-size: 1rem; color: var(--text-medium); font-weight: 500; margin-top: 1rem; }
+        .metric-box .value { font-size: 1.8rem; font-weight: 600; color: var(--text-dark); }
+        .growth-rate { font-size: 1rem; font-weight: 500; }
+        .growth-rate.positive { color: #388E3C; }
+        .growth-rate.negative { color: #D32F2F; }
+        .chart-container { position: relative; height: 400px; margin-top: 2rem; }
+        .loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.8); display: flex; justify-content: center; align-items: center; z-index: 9999; display: none; }
+        .loader { border: 8px solid #f3f3f3; border-radius: 50%; border-top: 8px solid var(--primary); width: 60px; height: 60px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+
+<body>
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loader"></div>
+    </div>
+
+    <div class="app-container">
+        <header class="app-header">
+            <h1 class="title is-2 has-text-weight-bold"><i class="fas fa-leaf has-text-success"></i> SSKratomYMT Pro Dashboard</h1>
+            <p class="subtitle is-5" id="currentDate"></p>
+        </header>
+
+        <div class="tabs is-centered is-boxed tab-menu">
+            <ul>
+                <li class="tab-btn active" data-tab="dashboard-tab"><a><i class="fas fa-chart-bar mr-2"></i>แดชบอร์ดวิเคราะห์</a></li>
+                <li class="tab-btn" data-tab="sales-tab"><a><i class="fas fa-edit mr-2"></i>บันทึกยอดขาย</a></li>
+            </ul>
+        </div>
+
+        <div id="sales-tab" class="tab-content">
+            <form id="saleForm">
+                <div class="columns">
+                    <div class="column">
+                        <div class="form-card">
+                            <h2 class="title is-4"><i class="fas fa-shopping-cart has-text-success"></i> ข้อมูลการขาย</h2>
+                            <div class="form-group field">
+                                <label class="label" for="date"><i class="far fa-calendar-alt"></i> วันที่</label>
+                                <div class="control"><input class="input" type="date" id="date" required /></div>
+                            </div>
+                            <div class="form-group field">
+                                <label class="label" for="sold"><i class="fas fa-wine-bottle"></i> จำนวนที่ขาย (ขวด)</label>
+                                <div class="control"><input class="input" type="number" id="sold" min="0" value="0" /></div>
+                            </div>
+                            <div class="form-group field">
+                                <label class="label" for="pending"><i class="fas fa-clock"></i> ค้างน้ำดิบ (ขวด)</label>
+                                <div class="control"><input class="input" type="number" id="pending" min="0" value="0" /></div>
+                            </div>
+                            <div class="form-group field">
+                                <label class="label" for="cleared"><i class="fas fa-check-circle"></i> เคลียร์ยอดค้าง (ขวด)</label>
+                                <div class="control"><input class="input" type="number" id="cleared" min="0" value="0" /></div>
+                            </div>
+                            <div class="output-box revenue"><span>รายรับ:</span><strong id="revenue">0</strong> บาท</div>
+                        </div>
+                    </div>
+                    <div class="column">
+                        <div class="form-card">
+                            <h2 class="title is-4"><i class="fas fa-money-bill-wave has-text-danger"></i> รายการค่าใช้จ่าย</h2>
+                            <div class="form-group field">
+                                <label class="label" for="pipeFee"><i class="fas fa-tools"></i> ค่าท่อม</label>
+                                <div class="control"><input class="input" type="number" id="pipeFee" min="0" value="0" /></div>
+                            </div>
+                            <div class="form-group field">
+                                <label class="label" for="shareFee"><i class="fas fa-handshake"></i> ค่าแชร์</label>
+                                <div class="control"><input class="input" type="number" id="shareFee" min="0" value="100" /></div>
+                            </div>
+                            <div class="form-group field">
+                                <label class="label" for="otherFee"><i class="fas fa-receipt"></i> ค่าใช้จ่ายอื่น</label>
+                                <div class="control"><input class="input" type="number" id="otherFee" min="0" value="0" /></div>
+                            </div>
+                            <div class="form-group field">
+                                <label class="label" for="saveFee"><i class="fas fa-piggy-bank"></i> เก็บออมเงิน</label>
+                                <div class="control"><input class="input" type="number" id="saveFee" min="0" value="500" /></div>
+                            </div>
+                            <div class="output-box expense"><span>รายจ่าย:</span><strong id="expense">0</strong> บาท</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-card summary">
+                    <div class="output-box balance"><span>ยอดคงเหลือ (กำไร):</span><strong id="balance">0</strong> บาท</div>
+                </div>
+                <button type="submit" class="submit-btn"><i class="fas fa-save mr-2"></i> ตรวจสอบและบันทึกข้อมูล</button>
+            </form>
+            <div id="msg" class="notification mt-4 is-hidden"></div>
+        </div>
+
+        <div id="dashboard-tab" class="tab-content active">
+            <div class="dashboard-card">
+                <div class="level">
+                    <div class="level-left">
+                        <div class="buttons are-medium filter-buttons" id="filterButtons">
+                            <button class="button is-success" data-filter="day">วันนี้</button>
+                            <button class="button" data-filter="week">สัปดาห์นี้</button>
+                            <button class="button" data-filter="month">เดือนนี้</button>
+                            <button class="button" data-filter="year">ปีนี้</button>
+                            <button class="button" data-filter="all">ทั้งหมด</button>
+                        </div>
+                    </div>
+                    <div class="level-right">
+                        <button class="button is-info" id="downloadBtn"><i class="fas fa-download mr-2"></i> ดาวน์โหลดข้อมูล (CSV)</button>
+                    </div>
+                </div>
+
+                <div class="columns is-multiline is-variable is-5 mt-5">
+                    <div class="column is-one-fifth-tablet">
+                        <div class="metric-box" style="border-color:#3498db;">
+                            <div class="icon"><i class="fas fa-boxes" style="color:#3498db;"></i></div>
+                            <p class="title">ยอดขายรวม</p>
+                            <p class="value" id="totalSold">0</p>
+                        </div>
+                    </div>
+                    <div class="column is-one-fifth-tablet">
+                        <div class="metric-box" style="border-color:#2ecc71;">
+                            <div class="icon"><i class="fas fa-sack-dollar" style="color:#2ecc71;"></i></div>
+                            <p class="title">รายได้รวม</p>
+                            <p class="value" id="totalRevenue">0</p>
+                        </div>
+                    </div>
+                    <div class="column is-one-fifth-tablet">
+                        <div class="metric-box" style="border-color:#e74c3c;">
+                            <div class="icon"><i class="fas fa-receipt" style="color:#e74c3c;"></i></div>
+                            <p class="title">รายจ่ายรวม</p>
+                            <p class="value" id="totalExpense">0</p>
+                        </div>
+                    </div>
+                    <div class="column is-one-fifth-tablet">
+                        <div class="metric-box" style="border-color:#9b59b6;">
+                            <div class="icon"><i class="fas fa-chart-line" style="color:#9b59b6;"></i></div>
+                            <p class="title">กำไรรวม</p>
+                            <p class="value" id="totalProfit">0</p>
+                        </div>
+                    </div>
+                    <div class="column is-one-fifth-tablet">
+                        <div class="metric-box" style="border-color:#f1c40f;">
+                            <div class="icon"><i class="fas fa-percentage" style="color:#f1c40f;"></i></div>
+                            <p class="title">อัตรากำไร</p>
+                            <p class="value" id="profitMargin">0%</p>
+                        </div>
+                    </div>
+                    <div class="column is-one-fifth-tablet">
+                        <div class="metric-box" style="border-color:#1abc9c;">
+                            <div class="icon"><i class="fas fa-chart-pie" style="color:#1abc9c;"></i></div>
+                            <p class="title">เฉลี่ยยอดขาย/วัน</p>
+                            <p class="value" id="avgSold">0</p>
+                        </div>
+                    </div>
+                    <div class="column is-one-fifth-tablet">
+                        <div class="metric-box" style="border-color:#34495e;">
+                            <div class="icon"><i class="fas fa-hand-holding-dollar" style="color:#34495e;"></i></div>
+                            <p class="title">เฉลี่ยรายได้/วัน</p>
+                            <p class="value" id="avgRevenue">0</p>
+                        </div>
+                    </div>
+                    <div class="column is-one-fifth-tablet">
+                        <div class="metric-box" style="border-color:#e67e22;">
+                            <div class="icon"><i class="fas fa-piggy-bank" style="color:#e67e22;"></i></div>
+                            <p class="title">เฉลี่ยกำไร/วัน</p>
+                            <p class="value" id="avgProfit">0</p>
+                        </div>
+                    </div>
+                    <div class="column is-two-fifths-tablet">
+                        <div class="metric-box" style="border-color:#7f8c8d;">
+                            <div class="icon"><i class="fas fa-arrow-trend-up" style="color:#7f8c8d;"></i></div>
+                            <p class="title">อัตราเติบโต (เทียบกับช่วงก่อนหน้า)</p>
+                            <p class="value growth-rate" id="growthRate">N/A</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chart-container"><canvas id="salesChart"></canvas></div>
+
+                <div class="mt-6">
+                    <h3 class="title is-4">ประวัติการทำรายการ (ล่าสุด)</h3>
+                    <div class="table-container">
+                        <table class="table is-fullwidth is-striped is-hoverable">
+                            <thead>
+                                <tr>
+                                    <th>วันที่</th>
+                                    <th>ยอดขาย (ขวด)</th>
+                                    <th>รายได้</th>
+                                    <th>รายจ่าย</th>
+                                    <th>กำไร</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dataTable"></tbody>
+                        </table>
+                    </div>
+                    <div class="level mt-4">
+                        <div class="level-left">
+                            <p id="tableInfo"></p>
+                        </div>
+                        <div class="level-right">
+                            <button class="button" id="showAllBtn">แสดงทั้งหมด</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <script>
+        // --- General ---
+        document.addEventListener('DOMContentLoaded', function() {
+            const tabs = document.querySelectorAll('.tab-btn');
+            const contents = document.querySelectorAll('.tab-content');
+            
+            document.getElementById('currentDate').textContent = new Date().toLocaleDateString('th-TH', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            document.getElementById('date').valueAsDate = new Date();
+        
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    tabs.forEach(item => item.classList.remove('active'));
+                    contents.forEach(content => content.classList.remove('active'));
+                    tab.classList.add('active');
+                    document.getElementById(tab.dataset.tab).classList.add('active');
+                    if (tab.dataset.tab === 'dashboard-tab' && !window.dashboardLoaded) {
+                         updateDashboard();
+                    }
+                });
+            });
+            // Initial load
+            updateDashboard();
+        });
+        
+        const showLoading = (show) => { document.getElementById('loadingOverlay').style.display = show ? 'flex' : 'none'; };
+        const formatCurrency = (num) => num.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const formatNumber = (num) => num.toLocaleString('th-TH');
+        
+        // --- Sales Form Logic ---
+        const pricePerBottle = 40;
+        const form = document.getElementById('saleForm');
+        const inputs = {
+            sold: document.getElementById('sold'), pending: document.getElementById('pending'), cleared: document.getElementById('cleared'),
+            pipeFee: document.getElementById('pipeFee'), shareFee: document.getElementById('shareFee'),
+            otherFee: document.getElementById('otherFee'), saveFee: document.getElementById('saveFee'),
+        };
+        const outputs = {
+            revenue: document.getElementById('revenue'), expense: document.getElementById('expense'), balance: document.getElementById('balance'),
+        };
+        
+        const calcRevenue = () => (Number(inputs.sold.value) + Number(inputs.cleared.value) - Number(inputs.pending.value)) * pricePerBottle;
+        const calcExpense = () => Number(inputs.pipeFee.value) + Number(inputs.shareFee.value) + Number(inputs.otherFee.value) + Number(inputs.saveFee.value);
+        const updateCalculations = () => {
+            const revenue = calcRevenue();
+            const expense = calcExpense();
+            const balance = revenue - expense;
+            outputs.revenue.textContent = formatNumber(revenue);
+            outputs.expense.textContent = formatNumber(expense);
+            outputs.balance.textContent = formatNumber(balance);
+        };
+        Object.values(inputs).forEach(input => input.addEventListener('input', updateCalculations));
+        
+        form.addEventListener('submit', e => {
+            e.preventDefault();
+            const msgEl = document.getElementById('msg');
+            const date = document.getElementById('date').value;
+            if (!date) {
+                msgEl.className = 'notification is-danger';
+                msgEl.textContent = '❌ โปรดเลือกวันที่';
+                msgEl.classList.remove('is-hidden');
+                return;
+            }
+        
+            const payload = {
+                date: date, sold: Number(inputs.sold.value), pending: Number(inputs.pending.value), cleared: Number(inputs.cleared.value),
+                revenue: calcRevenue(), pipeFee: Number(inputs.pipeFee.value), shareFee: Number(inputs.shareFee.value),
+                otherFee: Number(inputs.otherFee.value), saveFee: Number(inputs.saveFee.value), expense: calcExpense(), balance: calcRevenue() - calcExpense()
+            };
+            
+            const confirmationMessage = `
+                โปรดยืนยันข้อมูลที่จะบันทึก:
+                -----------------------------------
+                วันที่: ${new Date(payload.date).toLocaleDateString('th-TH')}
+                จำนวนขาย: ${payload.sold} ขวด
+                รายรับ: ${formatCurrency(payload.revenue)} บาท
+                รายจ่าย: ${formatCurrency(payload.expense)} บาท
+                คงเหลือ: ${formatCurrency(payload.balance)} บาท
+                -----------------------------------
+                กด 'OK' เพื่อบันทึก, 'Cancel' เพื่อยกเลิก
+            `;
+        
+            if (confirm(confirmationMessage)) {
+                msgEl.className = 'notification is-warning';
+                msgEl.textContent = '⏳ กำลังบันทึกข้อมูล...';
+                msgEl.classList.remove('is-hidden');
+                showLoading(true);
+        
+                google.script.run
+                    .withSuccessHandler(result => {
+                        showLoading(false);
+                        const res = JSON.parse(result);
+                        if (res.success) {
+                            msgEl.className = 'notification is-success';
+                            msgEl.textContent = '✅ บันทึกข้อมูลเรียบร้อยแล้ว!';
+                            form.reset();
+                            document.getElementById('date').valueAsDate = new Date();
+                            updateCalculations();
+                            window.dashboardLoaded = false;
+                            updateDashboard();
+                        } else {
+                            msgEl.className = 'notification is-danger';
+                            msgEl.textContent = `❌ เกิดข้อผิดพลาด: ${res.error}`;
+                        }
+                    })
+                    .withFailureHandler(error => {
+                        showLoading(false);
+                        msgEl.className = 'notification is-danger';
+                        msgEl.textContent = `❌ เกิดข้อผิดพลาดร้ายแรง: ${error.message}`;
+                    })
+                    .doPost(JSON.stringify(payload));
+            }
+        });
+        updateCalculations();
+        
+        // --- Dashboard Logic ---
+        let originalData = [];
+        let salesChart;
+        let currentFilter = 'day';
+        let showAll = false;
+        
+        const updateDashboard = () => {
+            showLoading(true);
+            google.script.run
+                .withSuccessHandler(response => {
+                    // This line sorts the data with the most recent date first.
+                    originalData = JSON.parse(response).sort((a, b) => new Date(b.date) - new Date(a.date));
+                    window.dashboardLoaded = true;
+                    processAndDisplayData();
+                    showLoading(false);
+                })
+                .withFailureHandler(error => {
+                    showLoading(false);
+                    alert(`ไม่สามารถโหลดข้อมูลได้: ${error.message}`);
+                })
+                .getData();
+        };
+        
+        const getPeriod = (date, periodType) => {
+            const d = new Date(date);
+            if (periodType === 'day') return d.toISOString().split('T')[0];
+            if (periodType === 'month') return `${d.getFullYear()}-${d.getMonth()}`;
+            if (periodType === 'year') return d.getFullYear().toString();
+            if (periodType === 'week') {
+                const firstDay = new Date(d.setDate(d.getDate() - d.getDay()));
+                return firstDay.toISOString().split('T')[0];
+            }
+            return 'all';
+        };
+        
+        const processAndDisplayData = () => {
+            const now = new Date();
+            const currentPeriodKey = getPeriod(now, currentFilter);
+            
+            let filteredData = [];
+            let previousPeriodData = [];
+        
+            if (currentFilter === 'all') {
+                filteredData = originalData;
+            } else {
+                 const nowForPrev = new Date();
+                 let prevPeriodKey;
+                 if (currentFilter === 'day') prevPeriodKey = getPeriod(nowForPrev.setDate(nowForPrev.getDate() - 1), 'day');
+                 if (currentFilter === 'week') prevPeriodKey = getPeriod(nowForPrev.setDate(nowForPrev.getDate() - 7), 'week');
+                 if (currentFilter === 'month') prevPeriodKey = getPeriod(nowForPrev.setMonth(nowForPrev.getMonth() - 1), 'month');
+                 if (currentFilter === 'year') prevPeriodKey = getPeriod(nowForPrev.setFullYear(nowForPrev.getFullYear() - 1), 'year');
+                
+                originalData.forEach(d => {
+                    if (getPeriod(d.date, currentFilter) === currentPeriodKey) filteredData.push(d);
+                    if (getPeriod(d.date, currentFilter) === prevPeriodKey) previousPeriodData.push(d);
+                });
+            }
+        
+            const totalSold = filteredData.reduce((sum, item) => sum + item.sold, 0);
+            const totalRevenue = filteredData.reduce((sum, item) => sum + item.revenue, 0);
+            const totalExpense = filteredData.reduce((sum, item) => sum + item.expense, 0);
+            const totalProfit = totalRevenue - totalExpense;
+            const profitMargin = totalRevenue > 0 ? ((totalProfit / totalRevenue) * 100) : 0;
+            const daysInFilter = filteredData.length > 0 ? new Set(filteredData.map(d => d.date)).size : 1;
+            
+            const prevProfit = previousPeriodData.reduce((sum, item) => sum + item.balance, 0);
+            let growthRate = "N/A";
+            if(prevProfit !== 0) {
+                const growth = ((totalProfit - prevProfit) / Math.abs(prevProfit)) * 100;
+                growthRate = `<span class="${growth >= 0 ? 'positive' : 'negative'}">${growth.toFixed(1)}% <i class="fas fa-arrow-${growth >= 0 ? 'up' : 'down'}"></i></span>`;
+            }
+        
+            document.getElementById('totalSold').textContent = formatNumber(totalSold);
+            document.getElementById('totalRevenue').textContent = formatCurrency(totalRevenue);
+            document.getElementById('totalExpense').textContent = formatCurrency(totalExpense);
+            document.getElementById('totalProfit').textContent = formatCurrency(totalProfit);
+            document.getElementById('profitMargin').textContent = `${profitMargin.toFixed(1)}%`;
+            document.getElementById('avgSold').textContent = formatNumber((totalSold / daysInFilter).toFixed(1));
+            document.getElementById('avgRevenue').textContent = formatCurrency((totalRevenue / daysInFilter));
+            document.getElementById('avgProfit').textContent = formatCurrency((totalProfit / daysInFilter));
+            document.getElementById('growthRate').innerHTML = growthRate;
+        
+            updateChart(filteredData);
+            updateTable(filteredData);
+        };
+        
+        const updateChart = (data) => {
+            const ctx = document.getElementById('salesChart').getContext('2d');
+            if (salesChart) salesChart.destroy();
+            
+            // For the chart, we need data sorted from oldest to newest
+            const chartData = [...data].sort((a,b) => new Date(a.date) - new Date(b.date));
+            const labels = chartData.map(d => d.date);
+        
+            salesChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { type: 'line', label: 'กำไร', data: chartData.map(d => d.balance), borderColor: '#9b59b6', tension: 0.1, yAxisID: 'y' },
+                        { type: 'bar', label: 'รายได้', data: chartData.map(d => d.revenue), backgroundColor: '#2ecc71', yAxisID: 'y' },
+                        { type: 'bar', label: 'รายจ่าย', data: chartData.map(d => d.expense), backgroundColor: '#e74c3c', yAxisID: 'y' },
+                        { type: 'bar', label: 'ยอดขาย (ขวด)', data: chartData.map(d => d.sold), backgroundColor: '#3498db', yAxisID: 'y1', hidden: true },
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    scales: {
+                       x: { type: 'time', time: { unit: 'day', tooltipFormat: 'dd MMM yyyy' } },
+                       y: { beginAtZero: true, position: 'left', title: { display: true, text: 'จำนวนเงิน (บาท)' } },
+                       y1: { beginAtZero: true, position: 'right', title: { display: true, text: 'จำนวน (ขวด)'}, grid: { drawOnChartArea: false } }
+                    }
+                }
+            });
+        };
+        
+        const updateTable = (data) => {
+            const tableBody = document.getElementById('dataTable');
+            const tableInfo = document.getElementById('tableInfo');
+            tableBody.innerHTML = '';
+            
+            // Data is already sorted newest-first from the initial fetch.
+            const dataToShow = showAll ? data : data.slice(0, 50);
+            
+            dataToShow.forEach(item => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${new Date(item.date).toLocaleDateString('th-TH')}</td>
+                    <td>${formatNumber(item.sold)}</td>
+                    <td>${formatCurrency(item.revenue)}</td>
+                    <td>${formatCurrency(item.expense)}</td>
+                    <td>${formatCurrency(item.balance)}</td>
+                `;
+                tableBody.appendChild(row);
+            });
+        
+            tableInfo.textContent = `แสดง ${dataToShow.length} จาก ${data.length} รายการ`;
+            document.getElementById('showAllBtn').style.display = data.length > 50 ? 'inline-flex' : 'none';
+            document.getElementById('showAllBtn').textContent = showAll ? 'แสดง 50 รายการล่าสุด' : 'แสดงทั้งหมด';
+        };
+        
+        // Event Listeners
+        document.getElementById('filterButtons').addEventListener('click', (e) => {
+            if (e.target.tagName === 'BUTTON') {
+                document.querySelectorAll('#filterButtons .button').forEach(b => b.classList.remove('is-success'));
+                e.target.classList.add('is-success');
+                currentFilter = e.target.dataset.filter;
+                showAll = false;
+                processAndDisplayData();
+            }
+        });
+        
+        document.getElementById('showAllBtn').addEventListener('click', () => {
+            showAll = !showAll;
+            processAndDisplayData();
+        });
+        
+        document.getElementById('downloadBtn').addEventListener('click', () => {
+            showLoading(true);
+            google.script.run
+                .withSuccessHandler(csvContent => {
+                    showLoading(false);
+                    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                    const link = document.createElement("a");
+                    const url = URL.createObjectURL(blob);
+                    link.setAttribute("href", url);
+                    link.setAttribute("download", "SSKratomYMT_SalesData.csv");
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                })
+                .withFailureHandler(err => {
+                    showLoading(false);
+                    alert("Download failed: " + err.message);
+                })
+                .getSheetDataAsCsv();
+        });
+    </script>
+</body>
+
+</html>
