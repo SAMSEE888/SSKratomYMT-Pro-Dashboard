@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="th">
-
 <head>
     <base target="_top">
     <meta charset="UTF-8" />
@@ -35,7 +34,6 @@
         .output-box.balance { border-left: 4px solid var(--primary); background-color: #F1F8E9; font-size: 1.5rem; font-weight: 600; }
         .submit-btn { width: 100%; padding: 1rem; background: linear-gradient(135deg, var(--primary-light), var(--primary)); color: white; border: none; border-radius: 8px; font-size: 1.2rem; font-weight: 500; cursor: pointer; transition: var(--transition); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .submit-btn:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
-        /* Dashboard Styles */
         .dashboard-card { background: var(--card-bg); border-radius: var(--border-radius); box-shadow: var(--shadow-md); padding: 2rem; }
         .filter-buttons .button { font-weight: 500; }
         .metric-box { background: var(--card-bg); border-radius: var(--border-radius); padding: 1.5rem; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: var(--transition); border-top: 4px solid; }
@@ -54,7 +52,6 @@
         .report-btn { margin: 0.5rem; }
     </style>
 </head>
-
 <body>
     <div class="loading-overlay" id="loadingOverlay">
         <div class="loader"></div>
@@ -145,7 +142,7 @@
                         </div>
                     </div>
                     <div class="level-right">
-                        <button class="button is-info" id="downloadBtn"><i class="fas fa-download mr-2"></i> ดาวน์โหลดข้อมูล (CSV)</button>
+                        <button class="button is-info" id="refreshBtn"><i class="fas fa-sync-alt mr-2"></i> รีเฟรชข้อมูล</button>
                     </div>
                 </div>
 
@@ -209,7 +206,7 @@
                     <div class="column is-two-fifths-tablet">
                         <div class="metric-box" style="border-color:#7f8c8d;">
                             <div class="icon"><i class="fas fa-arrow-trend-up" style="color:#7f8c8d;"></i></div>
-                            <p class="title">อัตราเติบโต (เทียบกับช่วงก่อนหน้า)</p>
+                            <p class="title">อัตราเติบโต</p>
                             <p class="value growth-rate" id="growthRate">N/A</p>
                         </div>
                     </div>
@@ -235,10 +232,7 @@
                     </div>
                     <div class="level mt-4">
                         <div class="level-left">
-                            <p id="tableInfo"></p>
-                        </div>
-                        <div class="level-right">
-                            <button class="button" id="showAllBtn">แสดงทั้งหมด</button>
+                            <p id="tableInfo">กำลังโหลดข้อมูล...</p>
                         </div>
                     </div>
                 </div>
@@ -257,20 +251,20 @@
                         <button class="button is-primary is-large report-btn" id="generateAllReportsBtn">
                             <i class="fas fa-magic mr-2"></i> สร้างรายงานสรุปทั้งหมด
                         </button>
-                        <button class="button is-info is-large report-btn" id="generateDailyReportBtn">
-                            <i class="fas fa-calendar-day mr-2"></i> รายงานสรุปรายวัน
-                        </button>
-                        <button class="button is-success is-large report-btn" id="generateMonthlyReportBtn">
-                            <i class="fas fa-calendar-alt mr-2"></i> รายงานสรุปรายเดือน
-                        </button>
                     </div>
-                    <div class="buttons is-centered mt-4">
-                        <button class="button is-warning report-btn" id="generateExpenseReportBtn">
-                            <i class="fas fa-chart-pie mr-2"></i> รายงานค่าใช้จ่าย
-                        </button>
-                        <button class="button is-danger report-btn" id="generateTrendReportBtn">
-                            <i class="fas fa-chart-line mr-2"></i> รายงานแนวโน้ม
-                        </button>
+                    <div class="content mt-4">
+                        <div class="notification is-info">
+                            <strong>รายงานที่จะถูกสร้าง:</strong>
+                            <ul class="mt-2">
+                                <li>📊 รายงานสรุปรายวัน</li>
+                                <li>📈 รายงานสรุปรายสัปดาห์</li>
+                                <li>📅 รายงานสรุปรายเดือน</li>
+                                <li>🎯 รายงานสรุปรายปี</li>
+                                <li>💰 รายงานค่าใช้จ่ายตามหมวดหมู่</li>
+                                <li>⚖️ รายงานเปรียบเทียบ</li>
+                                <li>📈 รายงานวิเคราะห์แนวโน้ม</li>
+                            </ul>
+                        </div>
                     </div>
                 </div>
 
@@ -279,12 +273,9 @@
                     <div class="content">
                         <ul>
                             <li><strong>รายงานสรุปทั้งหมด:</strong> สร้างชีตรายงานทั้งหมดใน Google Sheets (รายวัน, สัปดาห์, เดือน, ปี, ค่าใช้จ่าย, แนวโน้ม)</li>
-                            <li><strong>รายงานสรุปรายวัน:</strong> สรุปข้อมูลการขายแยกตามแต่ละวัน</li>
-                            <li><strong>รายงานสรุปรายเดือน:</strong> สรุปข้อมูลการขายแยกตามแต่ละเดือน พร้อมเปรียบเทียบการเติบโต</li>
-                            <li><strong>รายงานค่าใช้จ่าย:</strong> วิเคราะห์สัดส่วนค่าใช้จ่ายตามหมวดหมู่</li>
-                            <li><strong>รายงานแนวโน้ม:</strong> วิเคราะห์แนวโน้มการขายและกำไร</li>
+                            <li><strong>หลังจากสร้างรายงาน:</strong> ตรวจสอบที่ Google Sheets ของคุณเพื่อดูรายงานที่สร้างขึ้น</li>
+                            <li><strong>ข้อมูลจะถูกอัพเดต:</strong> อัตโนมัติตามข้อมูลที่มีในชีตหลัก</li>
                         </ul>
-                        <p class="has-text-grey"><i class="fas fa-lightbulb mr-2"></i>หลังจากสร้างรายงานแล้ว ให้ตรวจสอบที่ Google Sheets ของคุณเพื่อดูรายงานที่สร้างขึ้น</p>
                     </div>
                 </div>
 
@@ -294,7 +285,6 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
     <script>
         // ==================== CONFIGURATION ====================
         // เปลี่ยน URL นี้เป็น Web App URL ของคุณจาก Google Apps Script
@@ -334,18 +324,18 @@
         const callGoogleScript = async (action, data = null) => {
             showLoading(true);
             try {
-                const options = {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    }
-                };
-
+                const formData = new FormData();
+                formData.append('action', action);
+                
                 if (data) {
-                    options.body = JSON.stringify(data);
+                    formData.append('data', JSON.stringify(data));
                 }
 
-                const response = await fetch(SCRIPT_URL, options);
+                const response = await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    body: formData
+                });
+
                 const result = await response.json();
                 showLoading(false);
                 return result;
@@ -413,22 +403,12 @@
                 balance: calcRevenue() - calcExpense()
             };
             
-            const confirmationMessage = `
-                โปรดยืนยันข้อมูลที่จะบันทึก:
-                -----------------------------------
-                วันที่: ${new Date(payload.date).toLocaleDateString('th-TH')}
-                จำนวนขาย: ${payload.sold} ขวด
-                รายรับ: ${formatCurrency(payload.revenue)} บาท
-                รายจ่าย: ${formatCurrency(payload.expense)} บาท
-                คงเหลือ: ${formatCurrency(payload.balance)} บาท
-                -----------------------------------
-                กด 'OK' เพื่อบันทึก, 'Cancel' เพื่อยกเลิก
-            `;
+            const confirmationMessage = `โปรดยืนยันข้อมูลที่จะบันทึก:\nวันที่: ${new Date(payload.date).toLocaleDateString('th-TH')}\nจำนวนขาย: ${payload.sold} ขวด\nรายรับ: ${formatCurrency(payload.revenue)} บาท\nรายจ่าย: ${formatCurrency(payload.expense)} บาท\nคงเหลือ: ${formatCurrency(payload.balance)} บาท\n\nกด 'OK' เพื่อบันทึก, 'Cancel' เพื่อยกเลิก`;
 
             if (confirm(confirmationMessage)) {
                 try {
                     showMessage('⏳ กำลังบันทึกข้อมูล...', 'warning');
-                    const result = await callGoogleScript('doPost', payload);
+                    const result = await callGoogleScript('saveData', payload);
                     
                     if (result.success) {
                         showMessage('✅ บันทึกข้อมูลเรียบร้อยแล้ว!', 'success');
@@ -450,15 +430,20 @@
         let originalData = [];
         let salesChart;
         let currentFilter = 'day';
-        let showAll = false;
 
         const updateDashboard = async () => {
             try {
                 const data = await callGoogleScript('getData');
-                originalData = data.sort((a, b) => new Date(b.date) - new Date(a.date));
-                processAndDisplayData();
+                if (data && data.length > 0) {
+                    originalData = data.sort((a, b) => new Date(b.date) - new Date(a.date));
+                    processAndDisplayData();
+                } else {
+                    document.getElementById('tableInfo').textContent = 'ไม่มีข้อมูล';
+                    document.getElementById('dataTable').innerHTML = '<tr><td colspan="5" class="has-text-centered">ไม่มีข้อมูลการขาย</td></tr>';
+                }
             } catch (error) {
-                alert(`ไม่สามารถโหลดข้อมูลได้: ${error.message}`);
+                console.error('Dashboard error:', error);
+                document.getElementById('tableInfo').textContent = 'เกิดข้อผิดพลาดในการโหลดข้อมูล';
             }
         };
 
@@ -511,6 +496,7 @@
                 growthRate = `<span class="${growth >= 0 ? 'positive' : 'negative'}">${growth.toFixed(1)}% <i class="fas fa-arrow-${growth >= 0 ? 'up' : 'down'}"></i></span>`;
             }
 
+            // Update metrics
             document.getElementById('totalSold').textContent = formatNumber(totalSold);
             document.getElementById('totalRevenue').textContent = formatCurrency(totalRevenue);
             document.getElementById('totalExpense').textContent = formatCurrency(totalExpense);
@@ -529,27 +515,98 @@
             const ctx = document.getElementById('salesChart').getContext('2d');
             if (salesChart) salesChart.destroy();
             
+            if (data.length === 0) {
+                ctx.font = '16px Kanit';
+                ctx.fillStyle = '#666';
+                ctx.textAlign = 'center';
+                ctx.fillText('ไม่มีข้อมูลสำหรับแสดงกราฟ', ctx.canvas.width / 2, ctx.canvas.height / 2);
+                return;
+            }
+
             const chartData = [...data].sort((a,b) => new Date(a.date) - new Date(b.date));
-            const labels = chartData.map(d => d.date);
+            const labels = chartData.map(d => new Date(d.date).toLocaleDateString('th-TH'));
 
             salesChart = new Chart(ctx, {
                 type: 'bar',
                 data: {
                     labels: labels,
                     datasets: [
-                        { type: 'line', label: 'กำไร', data: chartData.map(d => d.balance), borderColor: '#9b59b6', tension: 0.1, yAxisID: 'y' },
-                        { type: 'bar', label: 'รายได้', data: chartData.map(d => d.revenue), backgroundColor: '#2ecc71', yAxisID: 'y' },
-                        { type: 'bar', label: 'รายจ่าย', data: chartData.map(d => d.expense), backgroundColor: '#e74c3c', yAxisID: 'y' },
-                        { type: 'bar', label: 'ยอดขาย (ขวด)', data: chartData.map(d => d.sold), backgroundColor: '#3498db', yAxisID: 'y1', hidden: true },
+                        { 
+                            type: 'line', 
+                            label: 'กำไร', 
+                            data: chartData.map(d => d.balance), 
+                            borderColor: '#9b59b6', 
+                            backgroundColor: 'rgba(155, 89, 182, 0.1)',
+                            tension: 0.1, 
+                            yAxisID: 'y',
+                            borderWidth: 2
+                        },
+                        { 
+                            type: 'bar', 
+                            label: 'รายได้', 
+                            data: chartData.map(d => d.revenue), 
+                            backgroundColor: 'rgba(46, 204, 113, 0.7)', 
+                            yAxisID: 'y' 
+                        },
+                        { 
+                            type: 'bar', 
+                            label: 'รายจ่าย', 
+                            data: chartData.map(d => d.expense), 
+                            backgroundColor: 'rgba(231, 76, 60, 0.7)', 
+                            yAxisID: 'y' 
+                        }
                     ]
                 },
                 options: {
                     responsive: true, 
                     maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: {
+                                font: {
+                                    family: 'Kanit'
+                                }
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.y !== null) {
+                                        label += formatCurrency(context.parsed.y) + ' บาท';
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    },
                     scales: {
-                       x: { type: 'time', time: { unit: 'day', tooltipFormat: 'dd MMM yyyy' } },
-                       y: { beginAtZero: true, position: 'left', title: { display: true, text: 'จำนวนเงิน (บาท)' } },
-                       y1: { beginAtZero: true, position: 'right', title: { display: true, text: 'จำนวน (ขวด)'}, grid: { drawOnChartArea: false } }
+                       x: {
+                         ticks: {
+                            font: {
+                                family: 'Kanit'
+                            }
+                         }
+                       },
+                       y: { 
+                         beginAtZero: true, 
+                         position: 'left', 
+                         title: { 
+                            display: true, 
+                            text: 'จำนวนเงิน (บาท)',
+                            font: {
+                                family: 'Kanit'
+                            }
+                         },
+                         ticks: {
+                            callback: function(value) {
+                                return formatCurrency(value);
+                            }
+                         }
+                       }
                     }
                 }
             });
@@ -558,37 +615,52 @@
         const updateTable = (data) => {
             const tableBody = document.getElementById('dataTable');
             const tableInfo = document.getElementById('tableInfo');
-            tableBody.innerHTML = '';
             
-            const dataToShow = showAll ? data : data.slice(0, 50);
+            if (data.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="5" class="has-text-centered">ไม่มีข้อมูลการขาย</td></tr>';
+                tableInfo.textContent = 'แสดง 0 จาก 0 รายการ';
+                return;
+            }
+            
+            const dataToShow = data.slice(0, 50);
+            tableBody.innerHTML = '';
             
             dataToShow.forEach(item => {
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td>${new Date(item.date).toLocaleDateString('th-TH')}</td>
-                    <td>${formatNumber(item.sold)}</td>
-                    <td>${formatCurrency(item.revenue)}</td>
-                    <td>${formatCurrency(item.expense)}</td>
-                    <td>${formatCurrency(item.balance)}</td>
+                    <td class="has-text-right">${formatNumber(item.sold)}</td>
+                    <td class="has-text-right">${formatCurrency(item.revenue)}</td>
+                    <td class="has-text-right">${formatCurrency(item.expense)}</td>
+                    <td class="has-text-right has-text-weight-bold">${formatCurrency(item.balance)}</td>
                 `;
                 tableBody.appendChild(row);
             });
 
             tableInfo.textContent = `แสดง ${dataToShow.length} จาก ${data.length} รายการ`;
-            document.getElementById('showAllBtn').style.display = data.length > 50 ? 'inline-flex' : 'none';
-            document.getElementById('showAllBtn').textContent = showAll ? 'แสดง 50 รายการล่าสุด' : 'แสดงทั้งหมด';
         };
 
         // ==================== REPORT GENERATION ====================
-        const generateReport = async (reportType) => {
+        const generateReport = async () => {
             try {
-                showReportMessage('⏳ กำลังสร้างรายงาน...', 'warning');
-                const result = await callGoogleScript('generateAllReports');
+                showReportMessage('⏳ กำลังสร้างรายงาน... กรุณารอสักครู่', 'warning');
+                const result = await callGoogleScript('generateReports');
                 
                 if (result.success) {
                     showReportMessage(`
-                        ✅ ${result.message}<br>
-                        <strong>โปรดตรวจสอบที่ Google Sheets ของคุณเพื่อดูรายงานที่สร้างขึ้น</strong>
+                        <div class="content">
+                            <h4 class="has-text-success">✅ ${result.message}</h4>
+                            <p class="mt-2"><strong>โปรดตรวจสอบที่ Google Sheets ของคุณเพื่อดูรายงานที่สร้างขึ้น</strong></p>
+                            <ul class="mt-2">
+                                <li>📊 รายงานสรุปรายวัน</li>
+                                <li>📈 รายงานสรุปรายสัปดาห์</li>
+                                <li>📅 รายงานสรุปรายเดือน</li>
+                                <li>🎯 รายงานสรุปรายปี</li>
+                                <li>💰 รายงานค่าใช้จ่ายตามหมวดหมู่</li>
+                                <li>⚖️ รายงานเปรียบเทียบ</li>
+                                <li>📈 รายงานวิเคราะห์แนวโน้ม</li>
+                            </ul>
+                        </div>
                     `, 'success');
                 } else {
                     showReportMessage(`❌ เกิดข้อผิดพลาด: ${result.error}`, 'danger');
@@ -639,45 +711,15 @@
                 document.querySelectorAll('#filterButtons .button').forEach(b => b.classList.remove('is-success'));
                 e.target.classList.add('is-success');
                 currentFilter = e.target.dataset.filter;
-                showAll = false;
                 processAndDisplayData();
             }
         });
 
-        // Show all button
-        document.getElementById('showAllBtn').addEventListener('click', () => {
-            showAll = !showAll;
-            processAndDisplayData();
-        });
+        // Refresh button
+        document.getElementById('refreshBtn').addEventListener('click', updateDashboard);
 
-        // Download CSV
-        document.getElementById('downloadBtn').addEventListener('click', async () => {
-            try {
-                showLoading(true);
-                const response = await fetch(SCRIPT_URL);
-                const csvContent = await response.text();
-                
-                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-                const link = document.createElement("a");
-                const url = URL.createObjectURL(blob);
-                link.setAttribute("href", url);
-                link.setAttribute("download", "SSKratomYMT_SalesData.csv");
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                showLoading(false);
-            } catch (err) {
-                showLoading(false);
-                alert("Download failed: " + err.message);
-            }
-        });
-
-        // Report generation buttons
-        document.getElementById('generateAllReportsBtn').addEventListener('click', () => generateReport('all'));
-        document.getElementById('generateDailyReportBtn').addEventListener('click', () => generateReport('daily'));
-        document.getElementById('generateMonthlyReportBtn').addEventListener('click', () => generateReport('monthly'));
-        document.getElementById('generateExpenseReportBtn').addEventListener('click', () => generateReport('expense'));
-        document.getElementById('generateTrendReportBtn').addEventListener('click', () => generateReport('trend'));
+        // Report generation button
+        document.getElementById('generateAllReportsBtn').addEventListener('click', generateReport);
     </script>
 </body>
 </html>
