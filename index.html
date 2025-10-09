@@ -50,6 +50,8 @@
         .loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.8); display: flex; justify-content: center; align-items: center; z-index: 9999; display: none; }
         .loader { border: 8px solid #f3f3f3; border-radius: 50%; border-top: 8px solid var(--primary); width: 60px; height: 60px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .report-section { margin-top: 3rem; padding: 2rem; background: white; border-radius: var(--border-radius); box-shadow: var(--shadow-md); }
+        .report-btn { margin: 0.5rem; }
     </style>
 </head>
 
@@ -68,9 +70,11 @@
             <ul>
                 <li class="tab-btn active" data-tab="dashboard-tab"><a><i class="fas fa-chart-bar mr-2"></i>แดชบอร์ดวิเคราะห์</a></li>
                 <li class="tab-btn" data-tab="sales-tab"><a><i class="fas fa-edit mr-2"></i>บันทึกยอดขาย</a></li>
+                <li class="tab-btn" data-tab="reports-tab"><a><i class="fas fa-file-alt mr-2"></i>รายงานสรุป</a></li>
             </ul>
         </div>
 
+        <!-- แท็บบันทึกยอดขาย -->
         <div id="sales-tab" class="tab-content">
             <form id="saleForm">
                 <div class="columns">
@@ -127,6 +131,7 @@
             <div id="msg" class="notification mt-4 is-hidden"></div>
         </div>
 
+        <!-- แท็บแดชบอร์ดวิเคราะห์ -->
         <div id="dashboard-tab" class="tab-content active">
             <div class="dashboard-card">
                 <div class="level">
@@ -239,52 +244,139 @@
                 </div>
             </div>
         </div>
+
+        <!-- แท็บรายงานสรุป -->
+        <div id="reports-tab" class="tab-content">
+            <div class="dashboard-card">
+                <h2 class="title is-3 has-text-centered"><i class="fas fa-file-alt has-text-info mr-3"></i>ระบบรายงานสรุป</h2>
+                <p class="subtitle is-5 has-text-centered">สร้างรายงานสรุปข้อมูลการขายตามช่วงเวลาที่ต้องการ</p>
+                
+                <div class="report-section">
+                    <h3 class="title is-4"><i class="fas fa-cogs mr-2"></i>เครื่องมือสร้างรายงาน</h3>
+                    <div class="buttons is-centered">
+                        <button class="button is-primary is-large report-btn" id="generateAllReportsBtn">
+                            <i class="fas fa-magic mr-2"></i> สร้างรายงานสรุปทั้งหมด
+                        </button>
+                        <button class="button is-info is-large report-btn" id="generateDailyReportBtn">
+                            <i class="fas fa-calendar-day mr-2"></i> รายงานสรุปรายวัน
+                        </button>
+                        <button class="button is-success is-large report-btn" id="generateMonthlyReportBtn">
+                            <i class="fas fa-calendar-alt mr-2"></i> รายงานสรุปรายเดือน
+                        </button>
+                    </div>
+                    <div class="buttons is-centered mt-4">
+                        <button class="button is-warning report-btn" id="generateExpenseReportBtn">
+                            <i class="fas fa-chart-pie mr-2"></i> รายงานค่าใช้จ่าย
+                        </button>
+                        <button class="button is-danger report-btn" id="generateTrendReportBtn">
+                            <i class="fas fa-chart-line mr-2"></i> รายงานแนวโน้ม
+                        </button>
+                    </div>
+                </div>
+
+                <div class="report-section">
+                    <h3 class="title is-4"><i class="fas fa-info-circle mr-2"></i>คำแนะนำ</h3>
+                    <div class="content">
+                        <ul>
+                            <li><strong>รายงานสรุปทั้งหมด:</strong> สร้างชีตรายงานทั้งหมดใน Google Sheets (รายวัน, สัปดาห์, เดือน, ปี, ค่าใช้จ่าย, แนวโน้ม)</li>
+                            <li><strong>รายงานสรุปรายวัน:</strong> สรุปข้อมูลการขายแยกตามแต่ละวัน</li>
+                            <li><strong>รายงานสรุปรายเดือน:</strong> สรุปข้อมูลการขายแยกตามแต่ละเดือน พร้อมเปรียบเทียบการเติบโต</li>
+                            <li><strong>รายงานค่าใช้จ่าย:</strong> วิเคราะห์สัดส่วนค่าใช้จ่ายตามหมวดหมู่</li>
+                            <li><strong>รายงานแนวโน้ม:</strong> วิเคราะห์แนวโน้มการขายและกำไร</li>
+                        </ul>
+                        <p class="has-text-grey"><i class="fas fa-lightbulb mr-2"></i>หลังจากสร้างรายงานแล้ว ให้ตรวจสอบที่ Google Sheets ของคุณเพื่อดูรายงานที่สร้างขึ้น</p>
+                    </div>
+                </div>
+
+                <div id="reportMessage" class="notification mt-4 is-hidden"></div>
+            </div>
+        </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
     <script>
-        // --- General ---
-        document.addEventListener('DOMContentLoaded', function() {
-            const tabs = document.querySelectorAll('.tab-btn');
-            const contents = document.querySelectorAll('.tab-content');
-            
-            document.getElementById('currentDate').textContent = new Date().toLocaleDateString('th-TH', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-            document.getElementById('date').valueAsDate = new Date();
-        
-            tabs.forEach(tab => {
-                tab.addEventListener('click', () => {
-                    tabs.forEach(item => item.classList.remove('active'));
-                    contents.forEach(content => content.classList.remove('active'));
-                    tab.classList.add('active');
-                    document.getElementById(tab.dataset.tab).classList.add('active');
-                    if (tab.dataset.tab === 'dashboard-tab' && !window.dashboardLoaded) {
-                         updateDashboard();
-                    }
-                });
-            });
-            // Initial load
-            updateDashboard();
-        });
-        
-        const showLoading = (show) => { document.getElementById('loadingOverlay').style.display = show ? 'flex' : 'none'; };
+        // ==================== CONFIGURATION ====================
+        // เปลี่ยน URL นี้เป็น Web App URL ของคุณจาก Google Apps Script
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzPgDAOiQPQ3Mhsm0jd8tiFWz4sIDlQWs-lCiF0NyQFyCVRbj9JYpLYwYgKt-SthGgdQg/exec';
+
+        // ==================== UTILITY FUNCTIONS ====================
+        const showLoading = (show) => { 
+            document.getElementById('loadingOverlay').style.display = show ? 'flex' : 'none'; 
+        };
+
         const formatCurrency = (num) => num.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         const formatNumber = (num) => num.toLocaleString('th-TH');
-        
-        // --- Sales Form Logic ---
+
+        const showMessage = (message, type = 'info') => {
+            const msgEl = document.getElementById('msg');
+            msgEl.className = `notification is-${type}`;
+            msgEl.textContent = message;
+            msgEl.classList.remove('is-hidden');
+            
+            if (type === 'success') {
+                setTimeout(() => msgEl.classList.add('is-hidden'), 5000);
+            }
+        };
+
+        const showReportMessage = (message, type = 'info') => {
+            const msgEl = document.getElementById('reportMessage');
+            msgEl.className = `notification is-${type}`;
+            msgEl.innerHTML = message;
+            msgEl.classList.remove('is-hidden');
+            
+            if (type === 'success') {
+                setTimeout(() => msgEl.classList.add('is-hidden'), 5000);
+            }
+        };
+
+        // ==================== GOOGLE SCRIPT API CALLS ====================
+        const callGoogleScript = async (action, data = null) => {
+            showLoading(true);
+            try {
+                const options = {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                };
+
+                if (data) {
+                    options.body = JSON.stringify(data);
+                }
+
+                const response = await fetch(SCRIPT_URL, options);
+                const result = await response.json();
+                showLoading(false);
+                return result;
+            } catch (error) {
+                showLoading(false);
+                console.error('API Error:', error);
+                throw new Error(`เกิดข้อผิดพลาดในการเชื่อมต่อ: ${error.message}`);
+            }
+        };
+
+        // ==================== SALES FORM LOGIC ====================
         const pricePerBottle = 40;
         const form = document.getElementById('saleForm');
         const inputs = {
-            sold: document.getElementById('sold'), pending: document.getElementById('pending'), cleared: document.getElementById('cleared'),
-            pipeFee: document.getElementById('pipeFee'), shareFee: document.getElementById('shareFee'),
-            otherFee: document.getElementById('otherFee'), saveFee: document.getElementById('saveFee'),
+            sold: document.getElementById('sold'), 
+            pending: document.getElementById('pending'), 
+            cleared: document.getElementById('cleared'),
+            pipeFee: document.getElementById('pipeFee'), 
+            shareFee: document.getElementById('shareFee'),
+            otherFee: document.getElementById('otherFee'), 
+            saveFee: document.getElementById('saveFee'),
         };
         const outputs = {
-            revenue: document.getElementById('revenue'), expense: document.getElementById('expense'), balance: document.getElementById('balance'),
+            revenue: document.getElementById('revenue'), 
+            expense: document.getElementById('expense'), 
+            balance: document.getElementById('balance'),
         };
         
         const calcRevenue = () => (Number(inputs.sold.value) + Number(inputs.cleared.value) - Number(inputs.pending.value)) * pricePerBottle;
         const calcExpense = () => Number(inputs.pipeFee.value) + Number(inputs.shareFee.value) + Number(inputs.otherFee.value) + Number(inputs.saveFee.value);
+        
         const updateCalculations = () => {
             const revenue = calcRevenue();
             const expense = calcExpense();
@@ -293,23 +385,32 @@
             outputs.expense.textContent = formatNumber(expense);
             outputs.balance.textContent = formatNumber(balance);
         };
+
+        // Event listeners for real-time calculation
         Object.values(inputs).forEach(input => input.addEventListener('input', updateCalculations));
-        
-        form.addEventListener('submit', e => {
+
+        // Form submission
+        form.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const msgEl = document.getElementById('msg');
             const date = document.getElementById('date').value;
+            
             if (!date) {
-                msgEl.className = 'notification is-danger';
-                msgEl.textContent = '❌ โปรดเลือกวันที่';
-                msgEl.classList.remove('is-hidden');
+                showMessage('❌ โปรดเลือกวันที่', 'danger');
                 return;
             }
-        
+
             const payload = {
-                date: date, sold: Number(inputs.sold.value), pending: Number(inputs.pending.value), cleared: Number(inputs.cleared.value),
-                revenue: calcRevenue(), pipeFee: Number(inputs.pipeFee.value), shareFee: Number(inputs.shareFee.value),
-                otherFee: Number(inputs.otherFee.value), saveFee: Number(inputs.saveFee.value), expense: calcExpense(), balance: calcRevenue() - calcExpense()
+                date: date,
+                sold: Number(inputs.sold.value),
+                pending: Number(inputs.pending.value),
+                cleared: Number(inputs.cleared.value),
+                revenue: calcRevenue(),
+                pipeFee: Number(inputs.pipeFee.value),
+                shareFee: Number(inputs.shareFee.value),
+                otherFee: Number(inputs.otherFee.value),
+                saveFee: Number(inputs.saveFee.value),
+                expense: calcExpense(),
+                balance: calcRevenue() - calcExpense()
             };
             
             const confirmationMessage = `
@@ -323,63 +424,44 @@
                 -----------------------------------
                 กด 'OK' เพื่อบันทึก, 'Cancel' เพื่อยกเลิก
             `;
-        
+
             if (confirm(confirmationMessage)) {
-                msgEl.className = 'notification is-warning';
-                msgEl.textContent = '⏳ กำลังบันทึกข้อมูล...';
-                msgEl.classList.remove('is-hidden');
-                showLoading(true);
-        
-                google.script.run
-                    .withSuccessHandler(result => {
-                        showLoading(false);
-                        const res = JSON.parse(result);
-                        if (res.success) {
-                            msgEl.className = 'notification is-success';
-                            msgEl.textContent = '✅ บันทึกข้อมูลเรียบร้อยแล้ว!';
-                            form.reset();
-                            document.getElementById('date').valueAsDate = new Date();
-                            updateCalculations();
-                            window.dashboardLoaded = false;
-                            updateDashboard();
-                        } else {
-                            msgEl.className = 'notification is-danger';
-                            msgEl.textContent = `❌ เกิดข้อผิดพลาด: ${res.error}`;
-                        }
-                    })
-                    .withFailureHandler(error => {
-                        showLoading(false);
-                        msgEl.className = 'notification is-danger';
-                        msgEl.textContent = `❌ เกิดข้อผิดพลาดร้ายแรง: ${error.message}`;
-                    })
-                    .doPost(JSON.stringify(payload));
+                try {
+                    showMessage('⏳ กำลังบันทึกข้อมูล...', 'warning');
+                    const result = await callGoogleScript('doPost', payload);
+                    
+                    if (result.success) {
+                        showMessage('✅ บันทึกข้อมูลเรียบร้อยแล้ว!', 'success');
+                        form.reset();
+                        document.getElementById('date').valueAsDate = new Date();
+                        updateCalculations();
+                        // Refresh dashboard
+                        updateDashboard();
+                    } else {
+                        showMessage(`❌ เกิดข้อผิดพลาด: ${result.error}`, 'danger');
+                    }
+                } catch (error) {
+                    showMessage(`❌ เกิดข้อผิดพลาดร้ายแรง: ${error.message}`, 'danger');
+                }
             }
         });
-        updateCalculations();
-        
-        // --- Dashboard Logic ---
+
+        // ==================== DASHBOARD LOGIC ====================
         let originalData = [];
         let salesChart;
         let currentFilter = 'day';
         let showAll = false;
-        
-        const updateDashboard = () => {
-            showLoading(true);
-            google.script.run
-                .withSuccessHandler(response => {
-                    // This line sorts the data with the most recent date first.
-                    originalData = JSON.parse(response).sort((a, b) => new Date(b.date) - new Date(a.date));
-                    window.dashboardLoaded = true;
-                    processAndDisplayData();
-                    showLoading(false);
-                })
-                .withFailureHandler(error => {
-                    showLoading(false);
-                    alert(`ไม่สามารถโหลดข้อมูลได้: ${error.message}`);
-                })
-                .getData();
+
+        const updateDashboard = async () => {
+            try {
+                const data = await callGoogleScript('getData');
+                originalData = data.sort((a, b) => new Date(b.date) - new Date(a.date));
+                processAndDisplayData();
+            } catch (error) {
+                alert(`ไม่สามารถโหลดข้อมูลได้: ${error.message}`);
+            }
         };
-        
+
         const getPeriod = (date, periodType) => {
             const d = new Date(date);
             if (periodType === 'day') return d.toISOString().split('T')[0];
@@ -391,30 +473,30 @@
             }
             return 'all';
         };
-        
+
         const processAndDisplayData = () => {
             const now = new Date();
             const currentPeriodKey = getPeriod(now, currentFilter);
             
             let filteredData = [];
             let previousPeriodData = [];
-        
+
             if (currentFilter === 'all') {
                 filteredData = originalData;
             } else {
-                 const nowForPrev = new Date();
-                 let prevPeriodKey;
-                 if (currentFilter === 'day') prevPeriodKey = getPeriod(nowForPrev.setDate(nowForPrev.getDate() - 1), 'day');
-                 if (currentFilter === 'week') prevPeriodKey = getPeriod(nowForPrev.setDate(nowForPrev.getDate() - 7), 'week');
-                 if (currentFilter === 'month') prevPeriodKey = getPeriod(nowForPrev.setMonth(nowForPrev.getMonth() - 1), 'month');
-                 if (currentFilter === 'year') prevPeriodKey = getPeriod(nowForPrev.setFullYear(nowForPrev.getFullYear() - 1), 'year');
+                const nowForPrev = new Date();
+                let prevPeriodKey;
+                if (currentFilter === 'day') prevPeriodKey = getPeriod(nowForPrev.setDate(nowForPrev.getDate() - 1), 'day');
+                if (currentFilter === 'week') prevPeriodKey = getPeriod(nowForPrev.setDate(nowForPrev.getDate() - 7), 'week');
+                if (currentFilter === 'month') prevPeriodKey = getPeriod(nowForPrev.setMonth(nowForPrev.getMonth() - 1), 'month');
+                if (currentFilter === 'year') prevPeriodKey = getPeriod(nowForPrev.setFullYear(nowForPrev.getFullYear() - 1), 'year');
                 
                 originalData.forEach(d => {
                     if (getPeriod(d.date, currentFilter) === currentPeriodKey) filteredData.push(d);
                     if (getPeriod(d.date, currentFilter) === prevPeriodKey) previousPeriodData.push(d);
                 });
             }
-        
+
             const totalSold = filteredData.reduce((sum, item) => sum + item.sold, 0);
             const totalRevenue = filteredData.reduce((sum, item) => sum + item.revenue, 0);
             const totalExpense = filteredData.reduce((sum, item) => sum + item.expense, 0);
@@ -428,7 +510,7 @@
                 const growth = ((totalProfit - prevProfit) / Math.abs(prevProfit)) * 100;
                 growthRate = `<span class="${growth >= 0 ? 'positive' : 'negative'}">${growth.toFixed(1)}% <i class="fas fa-arrow-${growth >= 0 ? 'up' : 'down'}"></i></span>`;
             }
-        
+
             document.getElementById('totalSold').textContent = formatNumber(totalSold);
             document.getElementById('totalRevenue').textContent = formatCurrency(totalRevenue);
             document.getElementById('totalExpense').textContent = formatCurrency(totalExpense);
@@ -438,19 +520,18 @@
             document.getElementById('avgRevenue').textContent = formatCurrency((totalRevenue / daysInFilter));
             document.getElementById('avgProfit').textContent = formatCurrency((totalProfit / daysInFilter));
             document.getElementById('growthRate').innerHTML = growthRate;
-        
+
             updateChart(filteredData);
             updateTable(filteredData);
         };
-        
+
         const updateChart = (data) => {
             const ctx = document.getElementById('salesChart').getContext('2d');
             if (salesChart) salesChart.destroy();
             
-            // For the chart, we need data sorted from oldest to newest
             const chartData = [...data].sort((a,b) => new Date(a.date) - new Date(b.date));
             const labels = chartData.map(d => d.date);
-        
+
             salesChart = new Chart(ctx, {
                 type: 'bar',
                 data: {
@@ -463,7 +544,8 @@
                     ]
                 },
                 options: {
-                    responsive: true, maintainAspectRatio: false,
+                    responsive: true, 
+                    maintainAspectRatio: false,
                     scales: {
                        x: { type: 'time', time: { unit: 'day', tooltipFormat: 'dd MMM yyyy' } },
                        y: { beginAtZero: true, position: 'left', title: { display: true, text: 'จำนวนเงิน (บาท)' } },
@@ -472,13 +554,12 @@
                 }
             });
         };
-        
+
         const updateTable = (data) => {
             const tableBody = document.getElementById('dataTable');
             const tableInfo = document.getElementById('tableInfo');
             tableBody.innerHTML = '';
             
-            // Data is already sorted newest-first from the initial fetch.
             const dataToShow = showAll ? data : data.slice(0, 50);
             
             dataToShow.forEach(item => {
@@ -492,13 +573,67 @@
                 `;
                 tableBody.appendChild(row);
             });
-        
+
             tableInfo.textContent = `แสดง ${dataToShow.length} จาก ${data.length} รายการ`;
             document.getElementById('showAllBtn').style.display = data.length > 50 ? 'inline-flex' : 'none';
             document.getElementById('showAllBtn').textContent = showAll ? 'แสดง 50 รายการล่าสุด' : 'แสดงทั้งหมด';
         };
-        
-        // Event Listeners
+
+        // ==================== REPORT GENERATION ====================
+        const generateReport = async (reportType) => {
+            try {
+                showReportMessage('⏳ กำลังสร้างรายงาน...', 'warning');
+                const result = await callGoogleScript('generateAllReports');
+                
+                if (result.success) {
+                    showReportMessage(`
+                        ✅ ${result.message}<br>
+                        <strong>โปรดตรวจสอบที่ Google Sheets ของคุณเพื่อดูรายงานที่สร้างขึ้น</strong>
+                    `, 'success');
+                } else {
+                    showReportMessage(`❌ เกิดข้อผิดพลาด: ${result.error}`, 'danger');
+                }
+            } catch (error) {
+                showReportMessage(`❌ เกิดข้อผิดพลาด: ${error.message}`, 'danger');
+            }
+        };
+
+        // ==================== EVENT LISTENERS ====================
+        document.addEventListener('DOMContentLoaded', function() {
+            // Set current date
+            document.getElementById('currentDate').textContent = new Date().toLocaleDateString('th-TH', { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            });
+            document.getElementById('date').valueAsDate = new Date();
+
+            // Tab switching
+            const tabs = document.querySelectorAll('.tab-btn');
+            const contents = document.querySelectorAll('.tab-content');
+            
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    tabs.forEach(item => item.classList.remove('active'));
+                    contents.forEach(content => content.classList.remove('active'));
+                    tab.classList.add('active');
+                    document.getElementById(tab.dataset.tab).classList.add('active');
+                    
+                    if (tab.dataset.tab === 'dashboard-tab') {
+                        updateDashboard();
+                    }
+                });
+            });
+
+            // Initial calculations
+            updateCalculations();
+            
+            // Initial dashboard load
+            updateDashboard();
+        });
+
+        // Dashboard filter buttons
         document.getElementById('filterButtons').addEventListener('click', (e) => {
             if (e.target.tagName === 'BUTTON') {
                 document.querySelectorAll('#filterButtons .button').forEach(b => b.classList.remove('is-success'));
@@ -508,33 +643,41 @@
                 processAndDisplayData();
             }
         });
-        
+
+        // Show all button
         document.getElementById('showAllBtn').addEventListener('click', () => {
             showAll = !showAll;
             processAndDisplayData();
         });
-        
-        document.getElementById('downloadBtn').addEventListener('click', () => {
-            showLoading(true);
-            google.script.run
-                .withSuccessHandler(csvContent => {
-                    showLoading(false);
-                    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-                    const link = document.createElement("a");
-                    const url = URL.createObjectURL(blob);
-                    link.setAttribute("href", url);
-                    link.setAttribute("download", "SSKratomYMT_SalesData.csv");
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                })
-                .withFailureHandler(err => {
-                    showLoading(false);
-                    alert("Download failed: " + err.message);
-                })
-                .getSheetDataAsCsv();
+
+        // Download CSV
+        document.getElementById('downloadBtn').addEventListener('click', async () => {
+            try {
+                showLoading(true);
+                const response = await fetch(SCRIPT_URL);
+                const csvContent = await response.text();
+                
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement("a");
+                const url = URL.createObjectURL(blob);
+                link.setAttribute("href", url);
+                link.setAttribute("download", "SSKratomYMT_SalesData.csv");
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                showLoading(false);
+            } catch (err) {
+                showLoading(false);
+                alert("Download failed: " + err.message);
+            }
         });
+
+        // Report generation buttons
+        document.getElementById('generateAllReportsBtn').addEventListener('click', () => generateReport('all'));
+        document.getElementById('generateDailyReportBtn').addEventListener('click', () => generateReport('daily'));
+        document.getElementById('generateMonthlyReportBtn').addEventListener('click', () => generateReport('monthly'));
+        document.getElementById('generateExpenseReportBtn').addEventListener('click', () => generateReport('expense'));
+        document.getElementById('generateTrendReportBtn').addEventListener('click', () => generateReport('trend'));
     </script>
 </body>
-
 </html>
