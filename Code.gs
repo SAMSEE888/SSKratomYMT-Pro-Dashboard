@@ -10,21 +10,34 @@ function doGet(e) {
     .addMetaTag('viewport', 'width=device-width, initial-scale=1.0');
 }
 
-// ฟังก์ชันสำหรับจัดการ CORS
-function handleCORS() {
-  return ContentService.createTextOutput(JSON.stringify({status: 'ok'}))
-    .setMimeType(ContentService.MimeType.JSON)
-    .setHeaders({
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type'
-    });
+function doPost(e) {
+  try {
+    const action = e.parameter.action;
+    
+    if (action === 'saveData') {
+      return saveData(e.postData.contents);
+    } else if (action === 'getData') {
+      return getData();
+    } else if (action === 'generateReports') {
+      return generateAllReports();
+    }
+    
+    return ContentService.createTextOutput(JSON.stringify({
+      success: false,
+      error: 'Action not found'
+    })).setMimeType(ContentService.MimeType.JSON);
+    
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({
+      success: false,
+      error: error.message
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
 }
 
-// ฟังก์ชันบันทึกข้อมูลจากฟอร์ม
-function doPost(postData) {
+function saveData(postData) {
   try {
-    const data = JSON.parse(postData.postData.contents);
+    const data = JSON.parse(postData);
     
     // เปิด Spreadsheet
     const ss = SpreadsheetApp.openById(SHEET_ID);
@@ -68,36 +81,19 @@ function doPost(postData) {
     // บันทึกข้อมูลลงแถวใหม่
     sheet.appendRow(newRow);
     
-    const response = {
+    return ContentService.createTextOutput(JSON.stringify({
       success: true,
       message: 'บันทึกข้อมูลเรียบร้อยแล้ว'
-    };
-    
-    return ContentService.createTextOutput(JSON.stringify(response))
-      .setMimeType(ContentService.MimeType.JSON)
-      .setHeaders({
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type'
-      });
+    })).setMimeType(ContentService.MimeType.JSON);
       
   } catch (error) {
-    const response = {
+    return ContentService.createTextOutput(JSON.stringify({
       success: false,
       error: error.message
-    };
-    
-    return ContentService.createTextOutput(JSON.stringify(response))
-      .setMimeType(ContentService.MimeType.JSON)
-      .setHeaders({
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type'
-      });
+    })).setMimeType(ContentService.MimeType.JSON);
   }
 }
 
-// ฟังก์ชันดึงข้อมูลทั้งหมดสำหรับแดชบอร์ด
 function getData() {
   try {
     const ss = SpreadsheetApp.openById(SHEET_ID);
@@ -106,12 +102,7 @@ function getData() {
     // หากไม่มีข้อมูล
     if (sheet.getLastRow() <= 1) {
       return ContentService.createTextOutput(JSON.stringify([]))
-        .setMimeType(ContentService.MimeType.JSON)
-        .setHeaders({
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type'
-        });
+        .setMimeType(ContentService.MimeType.JSON);
     }
     
     // ดึงข้อมูลทั้งหมด (ข้ามหัวข้อ)
@@ -120,17 +111,15 @@ function getData() {
     
     // แปลงข้อมูลเป็น object
     const result = data.map(row => {
-      // แปลงวันที่จาก Google Sheets format
       let dateObj;
       if (row[0] instanceof Date) {
         dateObj = row[0];
       } else {
-        // หากเป็น string ให้แปลงเป็น Date object
         dateObj = new Date(row[0]);
       }
       
       return {
-        date: dateObj.toISOString().split('T')[0], // เก็บเป็น YYYY-MM-DD
+        date: dateObj.toISOString().split('T')[0],
         sold: Number(row[1]) || 0,
         pending: Number(row[2]) || 0,
         cleared: Number(row[3]) || 0,
@@ -145,81 +134,37 @@ function getData() {
     });
     
     return ContentService.createTextOutput(JSON.stringify(result))
-      .setMimeType(ContentService.MimeType.JSON)
-      .setHeaders({
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type'
-      });
+      .setMimeType(ContentService.MimeType.JSON);
       
   } catch (error) {
     return ContentService.createTextOutput(JSON.stringify({error: error.message}))
-      .setMimeType(ContentService.MimeType.JSON)
-      .setHeaders({
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type'
-      });
+      .setMimeType(ContentService.MimeType.JSON);
   }
 }
 
-// ฟังก์ชันดาวน์โหลดข้อมูลเป็น CSV
-function getSheetDataAsCsv() {
+function generateAllReports() {
   try {
     const ss = SpreadsheetApp.openById(SHEET_ID);
-    const sheet = ss.getSheetByName(SHEET_NAME);
     
-    // หากไม่มีข้อมูล
-    if (sheet.getLastRow() === 0) {
-      return ContentService.createTextOutput("ไม่มีข้อมูล")
-        .setMimeType(ContentService.MimeType.TEXT)
-        .setHeaders({
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type'
-        });
-    }
+    // สร้างชีตรายงานต่างๆ
+    createDailySummary(ss);
+    createWeeklySummary(ss);
+    createMonthlySummary(ss);
+    createYearlySummary(ss);
+    createExpenseCategorySummary(ss);
+    createComparisonReport(ss);
+    createTrendAnalysis(ss);
     
-    // ดึงข้อมูลทั้งหมด
-    const dataRange = sheet.getRange(1, 1, sheet.getLastRow(), 12);
-    const data = dataRange.getValues();
-    
-    // แปลงเป็น CSV
-    const csvContent = data.map(row => {
-      // จัดรูปแบบวันที่ให้เหมาะสม
-      const formattedRow = [...row];
-      if (formattedRow[0] instanceof Date) {
-        formattedRow[0] = Utilities.formatDate(formattedRow[0], Session.getScriptTimeZone(), 'dd/MM/yyyy');
-      }
-      if (formattedRow[11] instanceof Date) {
-        formattedRow[11] = Utilities.formatDate(formattedRow[11], Session.getScriptTimeZone(), 'dd/MM/yyyy HH:mm:ss');
-      }
-      return formattedRow.map(field => {
-        // ใส่เครื่องหมายคำพูดหากมี comma ใน field
-        if (typeof field === 'string' && field.includes(',')) {
-          return `"${field}"`;
-        }
-        return field;
-      }).join(',');
-    }).join('\n');
-    
-    return ContentService.createTextOutput(csvContent)
-      .setMimeType(ContentService.MimeType.CSV)
-      .setHeaders({
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type',
-        'Content-Disposition': 'attachment; filename="SSKratomYMT_SalesData.csv"'
-      });
+    return ContentService.createTextOutput(JSON.stringify({
+      success: true,
+      message: 'สร้างชีตรายงานสรุปทั้งหมดเรียบร้อยแล้ว! ตรวจสอบที่ Google Sheets ของคุณ'
+    })).setMimeType(ContentService.MimeType.JSON);
     
   } catch (error) {
-    return ContentService.createTextOutput("Error: " + error.message)
-      .setMimeType(ContentService.MimeType.TEXT)
-      .setHeaders({
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type'
-      });
+    return ContentService.createTextOutput(JSON.stringify({
+      success: false,
+      error: error.message
+    })).setMimeType(ContentService.MimeType.JSON);
   }
 }
 
@@ -236,175 +181,6 @@ function getDateRange(days) {
   return date;
 }
 
-// เพิ่มฟังก์ชัน createYearlySummary ที่ขาดไป
-function createYearlySummary(ss) {
-  const sheetName = 'รายงานสรุปรายปี';
-  let summarySheet = ss.getSheetByName(sheetName);
-  
-  if (!summarySheet) {
-    summarySheet = ss.insertSheet(sheetName);
-  } else {
-    summarySheet.clear();
-  }
-  
-  const headers = [
-    'ปี',
-    'ยอดขายรวม (ขวด)',
-    'รายได้รวม',
-    'รายจ่ายรวม',
-    'กำไรสุทธิ',
-    'อัตรากำไร (%)',
-    'ยอดขายเฉลี่ย/วัน',
-    'รายได้เฉลี่ย/วัน',
-    'กำไรเฉลี่ย/วัน',
-    'วันทำการ'
-  ];
-  
-  summarySheet.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold');
-  
-  const dataSheet = ss.getSheetByName(SHEET_NAME);
-  if (dataSheet.getLastRow() <= 1) return;
-  
-  const data = dataSheet.getRange(2, 1, dataSheet.getLastRow() - 1, 11).getValues();
-  
-  // จัดกลุ่มข้อมูลตามปี
-  const yearlyData = {};
-  data.forEach(row => {
-    const date = new Date(row[0]);
-    const year = date.getFullYear();
-    const yearKey = year.toString();
-    
-    if (!yearlyData[yearKey]) {
-      yearlyData[yearKey] = {
-        year: year,
-        sold: 0,
-        revenue: 0,
-        expense: 0,
-        balance: 0,
-        days: new Set(),
-        count: 0
-      };
-    }
-    
-    yearlyData[yearKey].sold += Number(row[1]) || 0;
-    yearlyData[yearKey].revenue += Number(row[4]) || 0;
-    yearlyData[yearKey].expense += Number(row[9]) || 0;
-    yearlyData[yearKey].balance += Number(row[10]) || 0;
-    yearlyData[yearKey].days.add(date.toISOString().split('T')[0]);
-    yearlyData[yearKey].count++;
-  });
-  
-  // คำนวณและบันทึกข้อมูลสรุป
-  const summaryData = [];
-  Object.keys(yearlyData).sort().forEach(yearKey => {
-    const year = yearlyData[yearKey];
-    const profitMargin = year.revenue > 0 ? (year.balance / year.revenue) * 100 : 0;
-    const workingDays = year.days.size;
-    
-    summaryData.push([
-      year.year,
-      year.sold,
-      year.revenue,
-      year.expense,
-      year.balance,
-      profitMargin.toFixed(2),
-      (year.sold / workingDays).toFixed(1),
-      (year.revenue / workingDays).toFixed(2),
-      (year.balance / workingDays).toFixed(2),
-      workingDays
-    ]);
-  });
-  
-  if (summaryData.length > 0) {
-    summarySheet.getRange(2, 1, summaryData.length, headers.length).setValues(summaryData);
-    
-    // จัดรูปแบบ
-    summarySheet.setColumnWidths(1, headers.length, 120);
-    summarySheet.getRange('C:E').setNumberFormat('#,##0.00');
-    summarySheet.getRange('F:F').setNumberFormat('0.00%');
-    summarySheet.getRange('G:I').setNumberFormat('#,##0.00');
-  }
-}
-
-// ฟังก์ชันสร้างชีตรายงานสรุปทั้งหมด
-function createSummaryReports() {
-  try {
-    const ss = SpreadsheetApp.openById(SHEET_ID);
-    
-    // สร้างชีตรายงานสรุปรายวัน
-    createDailySummary(ss);
-    
-    // สร้างชีตรายงานสรุปรายสัปดาห์
-    createWeeklySummary(ss);
-    
-    // สร้างชีตรายงานสรุปรายเดือน
-    createMonthlySummary(ss);
-    
-    // สร้างชีตรายงานสรุปรายปี
-    createYearlySummary(ss);
-    
-    // สร้างชีตรายงานสรุปตามหมวดหมู่ค่าใช้จ่าย
-    createExpenseCategorySummary(ss);
-    
-    // สร้างชีตรายงานเปรียบเทียบ
-    createComparisonReport(ss);
-    
-    // สร้างชีตสถิติและแนวโน้ม
-    createTrendAnalysis(ss);
-    
-    return ContentService.createTextOutput(JSON.stringify({
-      success: true,
-      message: 'สร้างชีตรายงานสรุปทั้งหมดเรียบร้อยแล้ว'
-    }))
-    .setMimeType(ContentService.MimeType.JSON)
-    .setHeaders({
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type'
-    });
-    
-  } catch (error) {
-    return ContentService.createTextOutput(JSON.stringify({
-      success: false,
-      error: error.message
-    }))
-    .setMimeType(ContentService.MimeType.JSON)
-    .setHeaders({
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type'
-    });
-  }
-}
-
-// ฟังก์ชันเรียกใช้งานจากเว็บแอป
-function generateAllReports() {
-  try {
-    createSummaryReports();
-    return ContentService.createTextOutput(JSON.stringify({
-      success: true,
-      message: 'สร้างรายงานสรุปทั้งหมดเรียบร้อยแล้ว'
-    }))
-    .setMimeType(ContentService.MimeType.JSON)
-    .setHeaders({
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type'
-    });
-  } catch (error) {
-    return ContentService.createTextOutput(JSON.stringify({
-      success: false,
-      error: error.message
-    }))
-    .setMimeType(ContentService.MimeType.JSON)
-    .setHeaders({
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type'
-    });
-  }
-}
-
 // สร้างรายงานสรุปรายวัน
 function createDailySummary(ss) {
   const sheetName = 'รายงานสรุปรายวัน';
@@ -416,42 +192,25 @@ function createDailySummary(ss) {
     summarySheet.clear();
   }
   
-  // หัวข้อรายงาน
   const headers = [
-    'วันที่',
-    'ยอดขายรวม (ขวด)',
-    'รายได้รวม',
-    'รายจ่ายรวม',
-    'กำไรสุทธิ',
-    'อัตรากำไร (%)',
-    'ค่าใช้จ่ายเฉลี่ย/ขวด',
-    'กำไรเฉลี่ย/ขวด',
-    'จำนวนวันทำการ'
+    'วันที่', 'ยอดขายรวม (ขวด)', 'รายได้รวม', 'รายจ่ายรวม', 'กำไรสุทธิ', 
+    'อัตรากำไร (%)', 'ค่าใช้จ่ายเฉลี่ย/ขวด', 'กำไรเฉลี่ย/ขวด', 'จำนวนวันทำการ'
   ];
   
   summarySheet.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold');
   
-  // ดึงข้อมูลจากชีตหลัก
   const dataSheet = ss.getSheetByName(SHEET_NAME);
   if (dataSheet.getLastRow() <= 1) return;
   
   const data = dataSheet.getRange(2, 1, dataSheet.getLastRow() - 1, 11).getValues();
   
-  // จัดกลุ่มข้อมูลตามวัน
   const dailyData = {};
   data.forEach(row => {
     const date = new Date(row[0]);
     const dateKey = date.toISOString().split('T')[0];
     
     if (!dailyData[dateKey]) {
-      dailyData[dateKey] = {
-        date: date,
-        sold: 0,
-        revenue: 0,
-        expense: 0,
-        balance: 0,
-        count: 0
-      };
+      dailyData[dateKey] = { date: date, sold: 0, revenue: 0, expense: 0, balance: 0, count: 0 };
     }
     
     dailyData[dateKey].sold += Number(row[1]) || 0;
@@ -461,7 +220,6 @@ function createDailySummary(ss) {
     dailyData[dateKey].count++;
   });
   
-  // คำนวณและบันทึกข้อมูลสรุป
   const summaryData = [];
   Object.keys(dailyData).sort().forEach(dateKey => {
     const day = dailyData[dateKey];
@@ -471,57 +229,14 @@ function createDailySummary(ss) {
     
     summaryData.push([
       Utilities.formatDate(day.date, Session.getScriptTimeZone(), 'dd/MM/yyyy'),
-      day.sold,
-      day.revenue,
-      day.expense,
-      day.balance,
-      profitMargin.toFixed(2),
-      avgExpensePerBottle.toFixed(2),
-      avgProfitPerBottle.toFixed(2),
-      day.count
+      day.sold, day.revenue, day.expense, day.balance,
+      profitMargin.toFixed(2), avgExpensePerBottle.toFixed(2), avgProfitPerBottle.toFixed(2), day.count
     ]);
   });
   
-  // บันทึกข้อมูล
   if (summaryData.length > 0) {
     summarySheet.getRange(2, 1, summaryData.length, headers.length).setValues(summaryData);
-    
-    // คำนวณรวมทั้งหมด
-    const totalRow = summaryData.length + 2;
-    summarySheet.getRange(totalRow, 1, 1, headers.length)
-      .setValues([[
-        'รวมทั้งหมด',
-        `=SUM(B2:B${totalRow-1})`,
-        `=SUM(C2:C${totalRow-1})`,
-        `=SUM(D2:D${totalRow-1})`,
-        `=SUM(E2:E${totalRow-1})`,
-        `=IF(C${totalRow}>0, E${totalRow}/C${totalRow}*100, 0)`,
-        `=IF(B${totalRow}>0, D${totalRow}/B${totalRow}, 0)`,
-        `=IF(B${totalRow}>0, E${totalRow}/B${totalRow}, 0)`,
-        `=SUM(I2:I${totalRow-1})`
-      ]])
-      .setFontWeight('bold')
-      .setBackground('#e6f3ff');
-    
-    // จัดรูปแบบ
     summarySheet.setColumnWidths(1, headers.length, 120);
-    summarySheet.getRange('C:C').setNumberFormat('#,##0.00');
-    summarySheet.getRange('D:D').setNumberFormat('#,##0.00');
-    summarySheet.getRange('E:E').setNumberFormat('#,##0.00');
-    summarySheet.getRange('F:F').setNumberFormat('0.00%');
-    summarySheet.getRange('G:G').setNumberFormat('#,##0.00');
-    summarySheet.getRange('H:H').setNumberFormat('#,##0.00');
-    
-    // เพิ่มการจัดรูปแบบเงื่อนไขสำหรับอัตรากำไร
-    const profitMarginRange = summarySheet.getRange(`F2:F${totalRow}`);
-    const rule = SpreadsheetApp.newConditionalFormatRule()
-      .whenNumberGreaterThan(20)
-      .setBackground('#c6efce')
-      .setRanges([profitMarginRange])
-      .build();
-    const rules = summarySheet.getConditionalFormatRules();
-    rules.push(rule);
-    summarySheet.setConditionalFormatRules(rules);
   }
 }
 
@@ -537,17 +252,8 @@ function createWeeklySummary(ss) {
   }
   
   const headers = [
-    'สัปดาห์',
-    'ปี',
-    'ยอดขายรวม (ขวด)',
-    'รายได้รวม',
-    'รายจ่ายรวม',
-    'กำไรสุทธิ',
-    'อัตรากำไร (%)',
-    'ยอดขายเฉลี่ย/วัน',
-    'รายได้เฉลี่ย/วัน',
-    'กำไรเฉลี่ย/วัน',
-    'วันทำการ'
+    'สัปดาห์', 'ปี', 'ยอดขายรวม (ขวด)', 'รายได้รวม', 'รายจ่ายรวม', 'กำไรสุทธิ',
+    'อัตรากำไร (%)', 'ยอดขายเฉลี่ย/วัน', 'รายได้เฉลี่ย/วัน', 'กำไรเฉลี่ย/วัน', 'วันทำการ'
   ];
   
   summarySheet.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold');
@@ -557,7 +263,6 @@ function createWeeklySummary(ss) {
   
   const data = dataSheet.getRange(2, 1, dataSheet.getLastRow() - 1, 11).getValues();
   
-  // จัดกลุ่มข้อมูลตามสัปดาห์
   const weeklyData = {};
   data.forEach(row => {
     const date = new Date(row[0]);
@@ -567,14 +272,8 @@ function createWeeklySummary(ss) {
     
     if (!weeklyData[weekKey]) {
       weeklyData[weekKey] = {
-        year: year,
-        week: weekNumber,
-        sold: 0,
-        revenue: 0,
-        expense: 0,
-        balance: 0,
-        days: new Set(),
-        count: 0
+        year: year, week: weekNumber, sold: 0, revenue: 0, expense: 0, balance: 0,
+        days: new Set(), count: 0
       };
     }
     
@@ -583,10 +282,8 @@ function createWeeklySummary(ss) {
     weeklyData[weekKey].expense += Number(row[9]) || 0;
     weeklyData[weekKey].balance += Number(row[10]) || 0;
     weeklyData[weekKey].days.add(date.toISOString().split('T')[0]);
-    weeklyData[weekKey].count++;
   });
   
-  // คำนวณและบันทึกข้อมูลสรุป
   const summaryData = [];
   Object.keys(weeklyData).sort().forEach(weekKey => {
     const week = weeklyData[weekKey];
@@ -594,28 +291,14 @@ function createWeeklySummary(ss) {
     const workingDays = week.days.size;
     
     summaryData.push([
-      `สัปดาห์ ${week.week}`,
-      week.year,
-      week.sold,
-      week.revenue,
-      week.expense,
-      week.balance,
-      profitMargin.toFixed(2),
-      (week.sold / workingDays).toFixed(1),
-      (week.revenue / workingDays).toFixed(2),
-      (week.balance / workingDays).toFixed(2),
-      workingDays
+      `สัปดาห์ ${week.week}`, week.year, week.sold, week.revenue, week.expense, week.balance,
+      profitMargin.toFixed(2), (week.sold / workingDays).toFixed(1),
+      (week.revenue / workingDays).toFixed(2), (week.balance / workingDays).toFixed(2), workingDays
     ]);
   });
   
   if (summaryData.length > 0) {
     summarySheet.getRange(2, 1, summaryData.length, headers.length).setValues(summaryData);
-    
-    // จัดรูปแบบ
-    summarySheet.setColumnWidths(1, headers.length, 120);
-    summarySheet.getRange('D:F').setNumberFormat('#,##0.00');
-    summarySheet.getRange('G:G').setNumberFormat('0.00%');
-    summarySheet.getRange('H:J').setNumberFormat('#,##0.00');
   }
 }
 
@@ -631,18 +314,8 @@ function createMonthlySummary(ss) {
   }
   
   const headers = [
-    'เดือน',
-    'ปี',
-    'ยอดขายรวม (ขวด)',
-    'รายได้รวม',
-    'รายจ่ายรวม',
-    'กำไรสุทธิ',
-    'อัตรากำไร (%)',
-    'ยอดขายเฉลี่ย/วัน',
-    'รายได้เฉลี่ย/วัน',
-    'กำไรเฉลี่ย/วัน',
-    'วันทำการ',
-    'เปรียบเทียบกับเดือนก่อน (%)'
+    'เดือน', 'ปี', 'ยอดขายรวม (ขวด)', 'รายได้รวม', 'รายจ่ายรวม', 'กำไรสุทธิ',
+    'อัตรากำไร (%)', 'ยอดขายเฉลี่ย/วัน', 'รายได้เฉลี่ย/วัน', 'กำไรเฉลี่ย/วัน', 'วันทำการ'
   ];
   
   summarySheet.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold');
@@ -652,7 +325,6 @@ function createMonthlySummary(ss) {
   
   const data = dataSheet.getRange(2, 1, dataSheet.getLastRow() - 1, 11).getValues();
   
-  // จัดกลุ่มข้อมูลตามเดือน
   const monthlyData = {};
   data.forEach(row => {
     const date = new Date(row[0]);
@@ -662,14 +334,8 @@ function createMonthlySummary(ss) {
     
     if (!monthlyData[monthKey]) {
       monthlyData[monthKey] = {
-        year: year,
-        month: month,
-        sold: 0,
-        revenue: 0,
-        expense: 0,
-        balance: 0,
-        days: new Set(),
-        count: 0
+        year: year, month: month, sold: 0, revenue: 0, expense: 0, balance: 0,
+        days: new Set(), count: 0
       };
     }
     
@@ -678,73 +344,87 @@ function createMonthlySummary(ss) {
     monthlyData[monthKey].expense += Number(row[9]) || 0;
     monthlyData[monthKey].balance += Number(row[10]) || 0;
     monthlyData[monthKey].days.add(date.toISOString().split('T')[0]);
-    monthlyData[monthKey].count++;
   });
   
-  // คำนวณและบันทึกข้อมูลสรุป
   const summaryData = [];
-  const sortedMonths = Object.keys(monthlyData).sort();
+  const monthNames = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+                     'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
   
-  sortedMonths.forEach((monthKey, index) => {
+  Object.keys(monthlyData).sort().forEach(monthKey => {
     const month = monthlyData[monthKey];
     const profitMargin = month.revenue > 0 ? (month.balance / month.revenue) * 100 : 0;
     const workingDays = month.days.size;
     
-    // คำนวณการเปรียบเทียบกับเดือนก่อน
-    let growthRate = 'N/A';
-    if (index > 0) {
-      const prevMonth = monthlyData[sortedMonths[index - 1]];
-      if (prevMonth.balance !== 0) {
-        const growth = ((month.balance - prevMonth.balance) / Math.abs(prevMonth.balance)) * 100;
-        growthRate = growth.toFixed(1);
-      }
-    }
-    
-    const monthNames = [
-      'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
-      'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
-    ];
-    
     summaryData.push([
-      monthNames[month.month - 1],
-      month.year,
-      month.sold,
-      month.revenue,
-      month.expense,
-      month.balance,
-      profitMargin.toFixed(2),
-      (month.sold / workingDays).toFixed(1),
-      (month.revenue / workingDays).toFixed(2),
-      (month.balance / workingDays).toFixed(2),
-      workingDays,
-      growthRate
+      monthNames[month.month - 1], month.year, month.sold, month.revenue, month.expense, month.balance,
+      profitMargin.toFixed(2), (month.sold / workingDays).toFixed(1),
+      (month.revenue / workingDays).toFixed(2), (month.balance / workingDays).toFixed(2), workingDays
     ]);
   });
   
   if (summaryData.length > 0) {
     summarySheet.getRange(2, 1, summaryData.length, headers.length).setValues(summaryData);
+  }
+}
+
+// สร้างรายงานสรุปรายปี
+function createYearlySummary(ss) {
+  const sheetName = 'รายงานสรุปรายปี';
+  let summarySheet = ss.getSheetByName(sheetName);
+  
+  if (!summarySheet) {
+    summarySheet = ss.insertSheet(sheetName);
+  } else {
+    summarySheet.clear();
+  }
+  
+  const headers = [
+    'ปี', 'ยอดขายรวม (ขวด)', 'รายได้รวม', 'รายจ่ายรวม', 'กำไรสุทธิ',
+    'อัตรากำไร (%)', 'ยอดขายเฉลี่ย/วัน', 'รายได้เฉลี่ย/วัน', 'กำไรเฉลี่ย/วัน', 'วันทำการ'
+  ];
+  
+  summarySheet.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold');
+  
+  const dataSheet = ss.getSheetByName(SHEET_NAME);
+  if (dataSheet.getLastRow() <= 1) return;
+  
+  const data = dataSheet.getRange(2, 1, dataSheet.getLastRow() - 1, 11).getValues();
+  
+  const yearlyData = {};
+  data.forEach(row => {
+    const date = new Date(row[0]);
+    const year = date.getFullYear();
+    const yearKey = year.toString();
     
-    // จัดรูปแบบ
-    summarySheet.setColumnWidths(1, headers.length, 120);
-    summarySheet.getRange('D:F').setNumberFormat('#,##0.00');
-    summarySheet.getRange('G:G').setNumberFormat('0.00%');
-    summarySheet.getRange('H:J').setNumberFormat('#,##0.00');
-    summarySheet.getRange('L:L').setNumberFormat('0.0"%";-0.0"%";"N/A"');
+    if (!yearlyData[yearKey]) {
+      yearlyData[yearKey] = {
+        year: year, sold: 0, revenue: 0, expense: 0, balance: 0,
+        days: new Set(), count: 0
+      };
+    }
     
-    // เพิ่มการจัดรูปแบบเงื่อนไขสำหรับการเติบโต
-    const growthRange = summarySheet.getRange(`L2:L${summaryData.length + 1}`);
-    const positiveRule = SpreadsheetApp.newConditionalFormatRule()
-      .whenNumberGreaterThan(0)
-      .setBackground('#c6efce')
-      .setRanges([growthRange])
-      .build();
-    const negativeRule = SpreadsheetApp.newConditionalFormatRule()
-      .whenNumberLessThan(0)
-      .setBackground('#ffcccc')
-      .setRanges([growthRange])
-      .build();
+    yearlyData[yearKey].sold += Number(row[1]) || 0;
+    yearlyData[yearKey].revenue += Number(row[4]) || 0;
+    yearlyData[yearKey].expense += Number(row[9]) || 0;
+    yearlyData[yearKey].balance += Number(row[10]) || 0;
+    yearlyData[yearKey].days.add(date.toISOString().split('T')[0]);
+  });
+  
+  const summaryData = [];
+  Object.keys(yearlyData).sort().forEach(yearKey => {
+    const year = yearlyData[yearKey];
+    const profitMargin = year.revenue > 0 ? (year.balance / year.revenue) * 100 : 0;
+    const workingDays = year.days.size;
     
-    summarySheet.setConditionalFormatRules([positiveRule, negativeRule]);
+    summaryData.push([
+      year.year, year.sold, year.revenue, year.expense, year.balance,
+      profitMargin.toFixed(2), (year.sold / workingDays).toFixed(1),
+      (year.revenue / workingDays).toFixed(2), (year.balance / workingDays).toFixed(2), workingDays
+    ]);
+  });
+  
+  if (summaryData.length > 0) {
+    summarySheet.getRange(2, 1, summaryData.length, headers.length).setValues(summaryData);
   }
 }
 
@@ -759,14 +439,7 @@ function createExpenseCategorySummary(ss) {
     summarySheet.clear();
   }
   
-  const headers = [
-    'หมวดหมู่',
-    'ยอดรวม',
-    'เปอร์เซ็นต์',
-    'เฉลี่ย/วัน',
-    'เฉลี่ย/ขวด'
-  ];
-  
+  const headers = ['หมวดหมู่', 'ยอดรวม', 'เปอร์เซ็นต์', 'เฉลี่ย/วัน', 'เฉลี่ย/ขวด'];
   summarySheet.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold');
   
   const dataSheet = ss.getSheetByName(SHEET_NAME);
@@ -774,7 +447,6 @@ function createExpenseCategorySummary(ss) {
   
   const data = dataSheet.getRange(2, 1, dataSheet.getLastRow() - 1, 11).getValues();
   
-  // คำนวณยอดรวมแต่ละหมวดหมู่
   const categories = {
     'ค่าท่อม': { total: 0, days: new Set() },
     'ค่าแชร์': { total: 0, days: new Set() },
@@ -801,7 +473,6 @@ function createExpenseCategorySummary(ss) {
     totalSold += Number(row[1]) || 0;
   });
   
-  // คำนวณเปอร์เซ็นต์และค่าเฉลี่ย
   const totalExpense = Object.values(categories).reduce((sum, cat) => sum + cat.total, 0);
   const totalDays = Math.max(...Object.values(categories).map(cat => cat.days.size));
   
@@ -812,51 +483,11 @@ function createExpenseCategorySummary(ss) {
     const avgPerDay = cat.total / totalDays;
     const avgPerBottle = totalSold > 0 ? cat.total / totalSold : 0;
     
-    summaryData.push([
-      category,
-      cat.total,
-      percentage.toFixed(2),
-      avgPerDay.toFixed(2),
-      avgPerBottle.toFixed(2)
-    ]);
+    summaryData.push([category, cat.total, percentage.toFixed(2), avgPerDay.toFixed(2), avgPerBottle.toFixed(2)]);
   });
   
   if (summaryData.length > 0) {
     summarySheet.getRange(2, 1, summaryData.length, headers.length).setValues(summaryData);
-    
-    // เพิ่มแถวรวม
-    const totalRow = summaryData.length + 2;
-    summarySheet.getRange(totalRow, 1, 1, headers.length)
-      .setValues([[
-        'รวมทั้งหมด',
-        `=SUM(B2:B${totalRow-1})`,
-        '100%',
-        `=SUM(D2:D${totalRow-1})`,
-        `=SUM(E2:E${totalRow-1})`
-      ]])
-      .setFontWeight('bold')
-      .setBackground('#e6f3ff');
-    
-    // จัดรูปแบบ
-    summarySheet.setColumnWidths(1, headers.length, 150);
-    summarySheet.getRange('B:B').setNumberFormat('#,##0.00');
-    summarySheet.getRange('C:C').setNumberFormat('0.00%');
-    summarySheet.getRange('D:E').setNumberFormat('#,##0.00');
-    
-    // สร้างแผนภูมิวงกลม
-    if (summaryData.length > 0) {
-      const chartRange = summarySheet.getRange(`A2:B${summaryData.length + 1}`);
-      const chart = summarySheet.newChart()
-        .setChartType(Charts.ChartType.PIE)
-        .addRange(chartRange)
-        .setPosition(2, 7, 0, 0)
-        .setOption('title', 'สัดส่วนค่าใช้จ่ายตามหมวดหมู่')
-        .setOption('pieHole', 0.4)
-        .setOption('is3D', true)
-        .build();
-      
-      summarySheet.insertChart(chart);
-    }
   }
 }
 
@@ -872,15 +503,8 @@ function createComparisonReport(ss) {
   }
   
   const headers = [
-    'ช่วงเวลา',
-    'ยอดขาย (ขวด)',
-    'รายได้',
-    'รายจ่าย',
-    'กำไร',
-    'อัตรากำไร (%)',
-    'ยอดขาย/วัน',
-    'รายได้/วัน',
-    'กำไร/วัน'
+    'ช่วงเวลา', 'ยอดขาย (ขวด)', 'รายได้', 'รายจ่าย', 'กำไร',
+    'อัตรากำไร (%)', 'ยอดขาย/วัน', 'รายได้/วัน', 'กำไร/วัน'
   ];
   
   summarySheet.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold');
@@ -890,7 +514,6 @@ function createComparisonReport(ss) {
   
   const data = dataSheet.getRange(2, 1, dataSheet.getLastRow() - 1, 11).getValues();
   
-  // คำนวณข้อมูลสำหรับแต่ละช่วงเวลา
   const periods = {
     '7 วันที่ผ่านมา': getDateRange(7),
     '30 วันที่ผ่านมา': getDateRange(30),
@@ -918,32 +541,19 @@ function createComparisonReport(ss) {
     const totalProfit = totalRevenue - totalExpense;
     const profitMargin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
     
-    // คำนวณจำนวนวัน
     const days = periodName === 'ทั้งหมด' ? 
       new Set(periodData.map(row => new Date(row[0]).toISOString().split('T')[0])).size :
       Math.min((now - periods[periodName]) / (1000 * 60 * 60 * 24), periodData.length);
     
     summaryData.push([
-      periodName,
-      totalSold,
-      totalRevenue,
-      totalExpense,
-      totalProfit,
-      profitMargin.toFixed(2),
-      (totalSold / days).toFixed(1),
-      (totalRevenue / days).toFixed(2),
-      (totalProfit / days).toFixed(2)
+      periodName, totalSold, totalRevenue, totalExpense, totalProfit,
+      profitMargin.toFixed(2), (totalSold / days).toFixed(1),
+      (totalRevenue / days).toFixed(2), (totalProfit / days).toFixed(2)
     ]);
   });
   
   if (summaryData.length > 0) {
     summarySheet.getRange(2, 1, summaryData.length, headers.length).setValues(summaryData);
-    
-    // จัดรูปแบบ
-    summarySheet.setColumnWidths(1, headers.length, 120);
-    summarySheet.getRange('C:E').setNumberFormat('#,##0.00');
-    summarySheet.getRange('F:F').setNumberFormat('0.00%');
-    summarySheet.getRange('G:I').setNumberFormat('#,##0.00');
   }
 }
 
@@ -959,14 +569,8 @@ function createTrendAnalysis(ss) {
   }
   
   const headers = [
-    'เดือน',
-    'ยอดขาย',
-    'แนวโน้มยอดขาย',
-    'รายได้',
-    'แนวโน้มรายได้',
-    'กำไร',
-    'แนวโน้มกำไร',
-    'อัตราการเติบโต (%)'
+    'เดือน', 'ยอดขาย', 'แนวโน้มยอดขาย', 'รายได้', 'แนวโน้มรายได้',
+    'กำไร', 'แนวโน้มกำไร', 'อัตราการเติบโต (%)'
   ];
   
   summarySheet.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold');
@@ -1004,47 +608,12 @@ function createTrendAnalysis(ss) {
     }
     
     trendData.push([
-      `${row[0]} ${row[1]}`,
-      sales,
-      salesTrend.toFixed(0),
-      revenue,
-      revenueTrend.toFixed(2),
-      profit,
-      profitTrend.toFixed(2),
-      growthRate === 'N/A' ? growthRate : growthRate.toFixed(1)
+      `${row[0]} ${row[1]}`, sales, salesTrend.toFixed(0), revenue, revenueTrend.toFixed(2),
+      profit, profitTrend.toFixed(2), growthRate === 'N/A' ? growthRate : growthRate.toFixed(1)
     ]);
   });
   
   if (trendData.length > 0) {
     summarySheet.getRange(2, 1, trendData.length, headers.length).setValues(trendData);
-    
-    // จัดรูปแบบ
-    summarySheet.setColumnWidths(1, headers.length, 130);
-    summarySheet.getRange('C:C').setNumberFormat('#,##0');
-    summarySheet.getRange('D:E').setNumberFormat('#,##0.00');
-    summarySheet.getRange('F:G').setNumberFormat('#,##0.00');
-    summarySheet.getRange('H:H').setNumberFormat('0.0"%";-0.0"%";"N/A"');
-    
-    // เพิ่มแผนภูมิแนวโน้ม
-    if (trendData.length >= 3) {
-      const chartRange = summarySheet.getRange(`A2:A${trendData.length + 1}`);
-      const profitRange = summarySheet.getRange(`F2:G${trendData.length + 1}`);
-      
-      const chart = summarySheet.newChart()
-        .setChartType(Charts.ChartType.LINE)
-        .addRange(chartRange)
-        .addRange(profitRange)
-        .setPosition(2, 9, 0, 0)
-        .setOption('title', 'แนวโน้มกำไร (เปรียบเทียบกับค่าเฉลี่ยเคลื่อนที่)')
-        .setOption('hAxis', { title: 'เดือน' })
-        .setOption('vAxis', { title: 'จำนวนเงิน (บาท)' })
-        .setOption('series', {
-          0: { labelInLegend: 'กำไรจริง' },
-          1: { labelInLegend: 'แนวโน้มกำไร' }
-        })
-        .build();
-      
-      summarySheet.insertChart(chart);
-    }
   }
 }
